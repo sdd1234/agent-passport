@@ -90,11 +90,10 @@ try {
     owner,
   ).deploy();
   await contract.waitForDeployment();
-  const jdk = fs.readdirSync(root + ".tools").find((s) => s.startsWith("jdk-"));
   const log = fs.openSync(root + ".data/live-integration.log", "w");
   apiProcess = spawn(
-    root + `.tools/${jdk}/bin/java`,
-    ["-jar", root + "apps/api/target/api-0.1.0.jar"],
+    "bash",
+    ["-c", 'source scripts/java-env.sh && exec java -jar apps/api/target/api-0.1.0.jar'],
     {
       cwd: root,
       env: {

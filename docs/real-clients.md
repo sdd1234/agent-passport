@@ -19,7 +19,7 @@
 
 ## 지금 다시 사용하기
 
-서버는 `npm run dev`로 실행합니다. 현재 작업 환경에서는 이미 실행 중입니다.
+서버는 `npm run dev`로 실행합니다. 새 복제본에서는 아래 자격증명과 이식 절차로 Agent를 먼저 등록하세요. Codex/Claude CLI 설치 및 각 계정 로그인도 필요합니다.
 
 ```bash
 cd /home/sinclair/agent-passport
@@ -45,7 +45,7 @@ npm run agent:claude
 
 ## 자격증명과 이식
 
-토큰은 `.data/agent-connections.json`에 파일 권한 600으로 저장되어 있으며 Git/ZIP에서 제외합니다. MCP 서버 실행기가 이 파일을 읽으므로 토큰을 CLI 인자나 공유 설정에 넣지 않습니다. ZIP만 다른 환경으로 옮기는 경우 대시보드에서 새 Agent 두 개를 등록하고 필요한 권한을 부여한 뒤 다음 로컬 파일을 만드세요.
+토큰은 `.data/agent-connections.json`에 파일 권한 600으로 저장되어 있으며 Git/ZIP에서 제외합니다. MCP 서버 실행기가 이 파일을 읽으므로 토큰을 CLI 인자나 공유 설정에 넣지 않습니다. GitHub에서 새로 복제하거나 ZIP을 다른 환경으로 옮기는 경우 대시보드에서 새 Agent 두 개를 등록하고 필요한 권한을 부여한 뒤 다음 로컬 파일을 만드세요.
 
 ```json
 {

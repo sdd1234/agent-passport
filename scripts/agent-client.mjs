@@ -8,7 +8,8 @@ if (!["codex", "claude"].includes(name))
   throw new Error("Usage: node scripts/agent-client.mjs codex|claude");
 if (!fs.existsSync(path.join(root, ".data/agent-connections.json")))
   throw new Error("Missing credentials. See docs/real-clients.md.");
-const check = await fetch("http://127.0.0.1:8080/api/health").catch(() => null);
+const config = JSON.parse(fs.readFileSync(path.join(root, ".data/agent-connections.json"), "utf8"));
+const check = await fetch((config.apiUrl || "http://127.0.0.1:8080") + "/api/health").catch(() => null);
 if (!check?.ok) throw new Error("Start Agent Passport with npm run dev first.");
 const args =
   name === "codex"

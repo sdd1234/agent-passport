@@ -6,7 +6,7 @@ const root = path.resolve(import.meta.dirname, ".."),
   dir = path.join(root, ".data/real-clients");
 fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
 fs.mkdirSync(path.join(root, ".data/client-workspace"), { recursive: true });
-const base = "http://127.0.0.1:8080";
+const base = process.env.PASSPORT_API_URL || "http://127.0.0.1:8080";
 let cookie = "";
 async function api(p, body) {
   const r = await fetch(base + "/api" + p, {

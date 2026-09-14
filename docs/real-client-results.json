@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-09-14T13:55:46.431Z",
+  "verifiedAt": "2026-09-14T14:37:51.853Z",
   "clients": {
     "codex": {
       "version": "0.154.0",
@@ -13,7 +13,7 @@
       "connection": "actual Claude Code → stdio MCP"
     }
   },
-  "project": "real-client-check-1789379635466",
+  "project": "real-client-check-1789396552029",
   "tests": {
     "codexSaveProposal": true,
     "ownerApproval": true,
@@ -26,8 +26,8 @@
     "noShellFallback": true
   },
   "testMarkers": {
-    "codex": "CODEX-26af84eea5fb298735fb",
-    "claude": "CLAUDE-4d038ad893bf0f607d17"
+    "codex": "CODEX-22840f005d55e33c98f2",
+    "claude": "CLAUDE-2e47a24e1cf4f7c35992"
   },
   "evidence": {
     "codexWrite": [
@@ -36,15 +36,15 @@
         "status": "completed",
         "args": {
           "canonical_key": "integration.codex.marker",
-          "content": "CODEX-26af84eea5fb298735fb",
+          "content": "CODEX-22840f005d55e33c98f2",
           "scope": "development",
-          "project": "real-client-check-1789379635466",
+          "project": "real-client-check-1789396552029",
           "type": "project_fact"
         },
         "result": {
+          "state": "pending",
           "kind": "proposal",
-          "id": "f12634fd-a786-45a2-ad14-e79570e93428",
-          "state": "pending"
+          "id": "b91eecc1-00d5-40ef-b143-e8ccc1d15a21"
         }
       }
     ],
@@ -54,31 +54,31 @@
         "args": {
           "query": "integration.codex.marker",
           "scope": "development",
-          "project": "real-client-check-1789379635466"
+          "project": "real-client-check-1789396552029"
         },
         "result": {
+          "permission": "ALLOW",
           "retrieval": "lexical+metadata",
           "memories": [
             {
-              "id": "a97a4ac3-6f05-47b2-9359-9254c170c94c",
+              "id": "23477427-b605-4413-8234-528620be590d",
               "owner_id": "demo-owner",
               "canonical_key": "integration.codex.marker",
-              "project": "real-client-check-1789379635466",
+              "project": "real-client-check-1789396552029",
               "scope": "development",
               "type": "project_fact",
               "current_version": 1,
               "status": "current",
-              "content": "CODEX-26af84eea5fb298735fb",
-              "content_hash": "16cb7e51147eef34ffbba9e2334476590aa7efdb31ae2f8d5ad2175933b15c8f",
-              "source_agent": "ef8a9ad7-8514-4726-8eb1-bd811e1f4808",
+              "content": "CODEX-22840f005d55e33c98f2",
+              "content_hash": "0679bdac2bea95bd2eeae940b78de74eac879bf5ef4246942407cbf801d165e1",
+              "source_agent": "34113256-b0c2-44ad-937f-cb0c034d2b38",
               "confidence": 0.85,
               "importance": 0.8,
-              "created_at": 1789379653355,
+              "created_at": 1789396618246,
               "valid_to": 0,
-              "score": 0.9624997940973635
+              "score": 0.9624997921876439
             }
-          ],
-          "permission": "ALLOW"
+          ]
         },
         "isError": false
       },
@@ -86,15 +86,15 @@
         "tool": "mcp__agent-passport__save_memory",
         "args": {
           "canonical_key": "integration.claude.marker",
-          "content": "CLAUDE-4d038ad893bf0f607d17",
+          "content": "CLAUDE-2e47a24e1cf4f7c35992",
           "scope": "development",
-          "project": "real-client-check-1789379635466",
+          "project": "real-client-check-1789396552029",
           "type": "project_fact"
         },
         "result": {
+          "state": "pending",
           "kind": "proposal",
-          "id": "fe169a9d-546f-496c-89a5-954223b57979",
-          "state": "pending"
+          "id": "c2720c25-2db8-47db-aab0-85912c4e5535"
         },
         "isError": false
       }
@@ -106,49 +106,49 @@
         "args": {
           "query": "integration.claude.marker",
           "scope": "development",
-          "project": "real-client-check-1789379635466"
+          "project": "real-client-check-1789396552029"
         },
         "result": {
+          "permission": "ALLOW",
           "retrieval": "lexical+metadata",
           "memories": [
             {
-              "id": "fa65d7d4-f194-474a-b31e-72d3beae8298",
+              "id": "bcf6e363-ee38-4cd6-a1d2-c2baa350c39a",
               "owner_id": "demo-owner",
               "canonical_key": "integration.claude.marker",
-              "project": "real-client-check-1789379635466",
+              "project": "real-client-check-1789396552029",
               "scope": "development",
               "type": "project_fact",
               "current_version": 1,
               "status": "current",
-              "content": "CLAUDE-4d038ad893bf0f607d17",
-              "content_hash": "d4ea4aa9a2a5c9cb75e0ed3a0a8c1616f51665788957dc5bdc21dc475fb9b084",
-              "source_agent": "3010ac29-df9e-4d41-a0de-a2dc16ecb86d",
+              "content": "CLAUDE-2e47a24e1cf4f7c35992",
+              "content_hash": "dce40b1550d213581bb83d0420c9c992b6a40b0822a1d1242e2c019e69aa560f",
+              "source_agent": "0b7d3e72-c158-4439-98e1-c9ef1a0fbae8",
               "confidence": 0.85,
               "importance": 0.8,
-              "created_at": 1789379682013,
+              "created_at": 1789396630286,
               "valid_to": 0,
-              "score": 0.9624992921312999
+              "score": 0.9624994390635488
             },
             {
-              "id": "a97a4ac3-6f05-47b2-9359-9254c170c94c",
+              "id": "23477427-b605-4413-8234-528620be590d",
               "owner_id": "demo-owner",
               "canonical_key": "integration.codex.marker",
-              "project": "real-client-check-1789379635466",
+              "project": "real-client-check-1789396552029",
               "scope": "development",
               "type": "project_fact",
               "current_version": 1,
               "status": "current",
-              "content": "CODEX-26af84eea5fb298735fb",
-              "content_hash": "16cb7e51147eef34ffbba9e2334476590aa7efdb31ae2f8d5ad2175933b15c8f",
-              "source_agent": "ef8a9ad7-8514-4726-8eb1-bd811e1f4808",
+              "content": "CODEX-22840f005d55e33c98f2",
+              "content_hash": "0679bdac2bea95bd2eeae940b78de74eac879bf5ef4246942407cbf801d165e1",
+              "source_agent": "34113256-b0c2-44ad-937f-cb0c034d2b38",
               "confidence": 0.85,
               "importance": 0.8,
-              "created_at": 1789379653355,
+              "created_at": 1789396618246,
               "valid_to": 0,
-              "score": 0.4124976336992203
+              "score": 0.41249874230851336
             }
-          ],
-          "permission": "ALLOW"
+          ]
         }
       }
     ],
@@ -159,7 +159,7 @@
         "args": {
           "query": "integration marker",
           "scope": "development",
-          "project": "real-client-check-1789379635466"
+          "project": "real-client-check-1789396552029"
         },
         "result": {
           "code": "MEMORY_SCOPE_DENIED"
@@ -172,7 +172,7 @@
         "args": {
           "query": "integration marker",
           "scope": "development",
-          "project": "real-client-check-1789379635466"
+          "project": "real-client-check-1789396552029"
         },
         "result": {
           "code": "MEMORY_SCOPE_DENIED"

@@ -1,5 +1,5 @@
 {
-  "testedAt": "2026-09-14T09:16:12.942Z",
+  "testedAt": "2026-09-14T14:35:43.404Z",
   "postgres": "16",
   "pgvector": "0.6.0",
   "vectorEmbeddings": "synthetic test vectors, not real OpenAI embeddings",

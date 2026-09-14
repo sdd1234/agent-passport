@@ -9,5 +9,5 @@ export default defineConfig({
       },
     },
   },
-  server: { port: 5173, proxy: { "/api": "http://127.0.0.1:8080" } },
+  server: { port: Number(process.env.WEB_PORT || 5173), proxy: { "/api": process.env.PASSPORT_API_URL || "http://127.0.0.1:8080" } },
 });

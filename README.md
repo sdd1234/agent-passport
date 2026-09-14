@@ -28,16 +28,18 @@ npm run agent:claude
 
 ## 바로 실행
 
-이 작업 환경에서는 의존성과 Java가 설치되어 있습니다.
+GitHub에서 처음 받는 경우 Linux x64/WSL과 Node.js 20.19 이상을 준비하세요.
 
 ```bash
-cd /home/sinclair/agent-passport
+git clone https://github.com/sdd1234/agent-passport.git
+cd agent-passport
+bash scripts/setup.sh
 npm run dev
 ```
 
 브라우저에서 **http://localhost:5173** → **데모 시작하기**.
 
-새 Linux/WSL 환경에서는 Node.js 20 이상이 있는 상태에서 다음을 실행합니다. 시스템 관리자 권한 없이 프로젝트 `.tools`에 Java 21/Maven을 준비합니다.
+새 Linux/WSL 환경에서는 Node.js 20.19 이상이 있는 상태에서 다음을 실행합니다. 시스템 관리자 권한 없이 프로젝트 `.tools`에 Java 21/Maven을 준비합니다.
 
 ```bash
 bash scripts/setup.sh
@@ -162,6 +164,8 @@ Live 권한 동기화 API는 실제 성공 receipt, 발신 지갑, 계약 주소
 `save_memory`도 승인이 필요한 후보를 만듭니다. `request_scope_access`는 소유자의 UI 승인 안내를 반환하며 스스로 권한을 획득하지 않습니다. MCP는 stdio 방식입니다. Remote HTTP MCP/OAuth 서버는 이번 구현에 포함하지 않았고, 실제 AI Playground는 문서에 허용된 backend adapter 경로를 사용합니다.
 
 ## 검증
+
+새 복제본 독립 검증 결과와 재현 방법: [clean-clone-verification.md](docs/clean-clone-verification.md). `npm run verify:local`은 별도 포트와 새 DB에서 빌드·Java·계약·브라우저·MCP 테스트를 실행하며, 실패를 생략하지 않습니다. Chromium과 OS 라이브러리는 먼저 설치해야 합니다.
 
 ```bash
 npm run build

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 20 || (major === 20 && minor < 19)) { console.error("Node.js 20.19+ required"); process.exit(1); }'
 mkdir -p .tools
-if ! command -v java >/dev/null; then
+source scripts/java-env.sh
+if ! command -v java >/dev/null || ! java -version 2>&1 | head -1 | grep -Eq 'version "21[.]'; then
   curl -fL --retry 2 'https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jdk/hotspot/normal/eclipse' -o .tools/jdk.tar.gz
   tar -xzf .tools/jdk.tar.gz -C .tools
   rm .tools/jdk.tar.gz
