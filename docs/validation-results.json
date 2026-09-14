@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-09-14T09:18:52.019838+00:00",
+  "frontendAndMcpBuild": "passed",
+  "javaIntegration": {
+    "passed": 8,
+    "failed": 0
+  },
+  "solidityEvmCases": {
+    "passed": 6,
+    "failed": 0
+  },
+  "browserE2E": {
+    "passed": 3,
+    "failed": 0
+  },
+  "mcpProtocol": "passed",
+  "postgresPgvectorIntegration": "passed with synthetic embeddings",
+  "liveModeLocalEvmIntegration": "passed",
+  "externalProviderCalls": "not invoked; keys not supplied",
+  "publicTestnet": "not deployed"
+}

@@ -1,0 +1,189 @@
+{
+  "verifiedAt": "2026-09-14T13:55:46.431Z",
+  "clients": {
+    "codex": {
+      "version": "0.154.0",
+      "authentication": "existing ChatGPT login",
+      "connection": "actual CLI → stdio MCP"
+    },
+    "claude": {
+      "version": "2.1.236",
+      "authentication": "existing Claude login",
+      "modelReported": "claude-opus-5[1m]",
+      "connection": "actual Claude Code → stdio MCP"
+    }
+  },
+  "project": "real-client-check-1789379635466",
+  "tests": {
+    "codexSaveProposal": true,
+    "ownerApproval": true,
+    "claudeReadsCodexBlindMarker": true,
+    "claudeSaveProposal": true,
+    "codexReadsClaudeBlindMarker": true,
+    "codexRevokeDenied": true,
+    "claudeRevokeDenied": true,
+    "sourceAgentVerified": true,
+    "noShellFallback": true
+  },
+  "testMarkers": {
+    "codex": "CODEX-26af84eea5fb298735fb",
+    "claude": "CLAUDE-4d038ad893bf0f607d17"
+  },
+  "evidence": {
+    "codexWrite": [
+      {
+        "tool": "save_memory",
+        "status": "completed",
+        "args": {
+          "canonical_key": "integration.codex.marker",
+          "content": "CODEX-26af84eea5fb298735fb",
+          "scope": "development",
+          "project": "real-client-check-1789379635466",
+          "type": "project_fact"
+        },
+        "result": {
+          "kind": "proposal",
+          "id": "f12634fd-a786-45a2-ad14-e79570e93428",
+          "state": "pending"
+        }
+      }
+    ],
+    "claudeHandoff": [
+      {
+        "tool": "mcp__agent-passport__search_memory",
+        "args": {
+          "query": "integration.codex.marker",
+          "scope": "development",
+          "project": "real-client-check-1789379635466"
+        },
+        "result": {
+          "retrieval": "lexical+metadata",
+          "memories": [
+            {
+              "id": "a97a4ac3-6f05-47b2-9359-9254c170c94c",
+              "owner_id": "demo-owner",
+              "canonical_key": "integration.codex.marker",
+              "project": "real-client-check-1789379635466",
+              "scope": "development",
+              "type": "project_fact",
+              "current_version": 1,
+              "status": "current",
+              "content": "CODEX-26af84eea5fb298735fb",
+              "content_hash": "16cb7e51147eef34ffbba9e2334476590aa7efdb31ae2f8d5ad2175933b15c8f",
+              "source_agent": "ef8a9ad7-8514-4726-8eb1-bd811e1f4808",
+              "confidence": 0.85,
+              "importance": 0.8,
+              "created_at": 1789379653355,
+              "valid_to": 0,
+              "score": 0.9624997940973635
+            }
+          ],
+          "permission": "ALLOW"
+        },
+        "isError": false
+      },
+      {
+        "tool": "mcp__agent-passport__save_memory",
+        "args": {
+          "canonical_key": "integration.claude.marker",
+          "content": "CLAUDE-4d038ad893bf0f607d17",
+          "scope": "development",
+          "project": "real-client-check-1789379635466",
+          "type": "project_fact"
+        },
+        "result": {
+          "kind": "proposal",
+          "id": "fe169a9d-546f-496c-89a5-954223b57979",
+          "state": "pending"
+        },
+        "isError": false
+      }
+    ],
+    "codexRecall": [
+      {
+        "tool": "search_memory",
+        "status": "completed",
+        "args": {
+          "query": "integration.claude.marker",
+          "scope": "development",
+          "project": "real-client-check-1789379635466"
+        },
+        "result": {
+          "retrieval": "lexical+metadata",
+          "memories": [
+            {
+              "id": "fa65d7d4-f194-474a-b31e-72d3beae8298",
+              "owner_id": "demo-owner",
+              "canonical_key": "integration.claude.marker",
+              "project": "real-client-check-1789379635466",
+              "scope": "development",
+              "type": "project_fact",
+              "current_version": 1,
+              "status": "current",
+              "content": "CLAUDE-4d038ad893bf0f607d17",
+              "content_hash": "d4ea4aa9a2a5c9cb75e0ed3a0a8c1616f51665788957dc5bdc21dc475fb9b084",
+              "source_agent": "3010ac29-df9e-4d41-a0de-a2dc16ecb86d",
+              "confidence": 0.85,
+              "importance": 0.8,
+              "created_at": 1789379682013,
+              "valid_to": 0,
+              "score": 0.9624992921312999
+            },
+            {
+              "id": "a97a4ac3-6f05-47b2-9359-9254c170c94c",
+              "owner_id": "demo-owner",
+              "canonical_key": "integration.codex.marker",
+              "project": "real-client-check-1789379635466",
+              "scope": "development",
+              "type": "project_fact",
+              "current_version": 1,
+              "status": "current",
+              "content": "CODEX-26af84eea5fb298735fb",
+              "content_hash": "16cb7e51147eef34ffbba9e2334476590aa7efdb31ae2f8d5ad2175933b15c8f",
+              "source_agent": "ef8a9ad7-8514-4726-8eb1-bd811e1f4808",
+              "confidence": 0.85,
+              "importance": 0.8,
+              "created_at": 1789379653355,
+              "valid_to": 0,
+              "score": 0.4124976336992203
+            }
+          ],
+          "permission": "ALLOW"
+        }
+      }
+    ],
+    "codexDenied": [
+      {
+        "tool": "search_memory",
+        "status": "failed",
+        "args": {
+          "query": "integration marker",
+          "scope": "development",
+          "project": "real-client-check-1789379635466"
+        },
+        "result": {
+          "code": "MEMORY_SCOPE_DENIED"
+        }
+      }
+    ],
+    "claudeDenied": [
+      {
+        "tool": "mcp__agent-passport__search_memory",
+        "args": {
+          "query": "integration marker",
+          "scope": "development",
+          "project": "real-client-check-1789379635466"
+        },
+        "result": {
+          "code": "MEMORY_SCOPE_DENIED"
+        },
+        "isError": true
+      }
+    ]
+  },
+  "limits": [
+    "This run used the local demo owner and local SQL permission backend.",
+    "Real client/model calls used the existing CLI logins; the Playground raw API-key adapters were not exercised.",
+    "Public testnet/wallet consent was not part of this client connectivity run."
+  ]
+}

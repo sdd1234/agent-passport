@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: passport
+      POSTGRES_USER: passport
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in .env}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U passport"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    environment:
+      APP_MODE: ${APP_MODE:-demo}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:5173}
+      BIND_ADDRESS: 0.0.0.0
+      DATABASE_URL: jdbc:postgresql://postgres:5432/passport
+      DATABASE_USER: passport
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      MEMORY_ENCRYPTION_KEY: ${MEMORY_ENCRYPTION_KEY:?Set MEMORY_ENCRYPTION_KEY}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      SEARCH_MODE: ${SEARCH_MODE:-lexical}
+      REGISTRY_ADDRESS: ${REGISTRY_ADDRESS:-}
+      EVM_RPC_URL: ${EVM_RPC_URL:-http://host.docker.internal:8545}
+      CHAIN_ID: ${CHAIN_ID:-31337}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+    ports: ["127.0.0.1:5173:80"]
+    depends_on: [api]
+volumes:
+  postgres:
