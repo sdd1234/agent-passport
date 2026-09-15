@@ -10,7 +10,7 @@
     "dev": "bash scripts/dev.sh",
     "build": "npm run build -w apps/web && npm run build -w apps/mcp-server",
     "test:contracts": "node --test contracts/test/registry.test.mjs",
-    "test:e2e": "playwright test",
+    "test:e2e": "bash scripts/test-browser.sh",
     "contracts:deploy": "node contracts/deploy.mjs",
     "test": "bash scripts/test.sh",
     "test:mcp": "node scripts/test-mcp.mjs",

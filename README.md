@@ -39,7 +39,7 @@ npm run dev
 
 브라우저에서 **http://localhost:5173** → **데모 시작하기**.
 
-새 Linux/WSL 환경에서는 Node.js 20.19 이상이 있는 상태에서 다음을 실행합니다. 시스템 관리자 권한 없이 프로젝트 `.tools`에 Java 21/Maven을 준비합니다.
+새 Linux/WSL 환경에서는 Node.js 20.19 이상이 있는 상태에서 다음을 실행합니다. 프로젝트 `.tools`에 Java 21/Maven, Chromium과 Ubuntu/WSL용 NSS/NSPR 라이브러리를 자동으로 준비합니다. 설치 마지막에 Chromium 실행까지 검사하며, 테스트 명령은 필요한 경로를 자동 적용합니다. Node.js, curl, tar와 Ubuntu/Debian의 apt-get, dpkg-deb는 호스트에 필요합니다. 다른 Linux 배포판에서 추가 OS 라이브러리가 필요하면 설치가 오류와 해결 명령을 표시합니다.
 
 ```bash
 bash scripts/setup.sh
@@ -165,7 +165,7 @@ Live 권한 동기화 API는 실제 성공 receipt, 발신 지갑, 계약 주소
 
 ## 검증
 
-새 복제본 독립 검증 결과와 재현 방법: [clean-clone-verification.md](docs/clean-clone-verification.md). `npm run verify:local`은 별도 포트와 새 DB에서 빌드·Java·계약·브라우저·MCP 테스트를 실행하며, 실패를 생략하지 않습니다. Chromium과 OS 라이브러리는 먼저 설치해야 합니다.
+새 복제본 독립 검증 결과와 재현 방법: [clean-clone-verification.md](docs/clean-clone-verification.md). `npm run verify:local`은 별도 포트와 새 DB에서 빌드·Java·계약·브라우저·MCP 테스트를 실행하며, 실패를 생략하지 않습니다. `bash scripts/setup.sh`가 Chromium 설치와 실행 확인까지 수행합니다. 설치 후 `npm run verify:local`만 실행하면 됩니다.
 
 ```bash
 npm run build
@@ -173,16 +173,11 @@ source scripts/java-env.sh
 mvn -q -f apps/api/pom.xml test
 npm run test:contracts
 # npm run dev 실행 상태에서
-npx playwright install chromium
 npm run test:e2e
 node scripts/test-mcp.mjs
 ```
 
-이 WSL의 Chromium은 시스템에 없는 NSS/NSPR 라이브러리를 프로젝트 `.tools/browser-libs`에서 사용합니다.
-
-```bash
-LD_LIBRARY_PATH="$PWD/.tools/browser-libs/usr/lib/x86_64-linux-gnu" npm run test:e2e
-```
+브라우저 테스트는 `.tools/playwright`와 `.tools/browser-libs`를 자동으로 사용합니다. `LD_LIBRARY_PATH`를 직접 지정할 필요가 없습니다. 다운로드 파일과 개인 DB는 Git에 포함되지 않으며 설치 시 생성됩니다.
 
 PostgreSQL/pgvector + live API/EVM 통합 테스트는 [통합 검증 안내](docs/testing.md)를 참고하세요. [검증 결과](docs/integration-results.json)에는 실제 검증과 외부 미검증 항목을 구분했습니다.
 

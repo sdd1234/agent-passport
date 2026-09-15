@@ -13,28 +13,18 @@
 
 ## 재현
 
-Linux x64 / WSL, Node.js 20.19 이상, curl/tar 필요. private 저장소를 읽을 수 있는 GitHub 로그인도 필요하다.
+Linux x64 / WSL, Node.js 20.19 이상, curl/tar 필요. 저장소는 public이며 GitHub 로그인 없이 복제할 수 있다.
 
 ```bash
 git clone https://github.com/sdd1234/agent-passport.git
 cd agent-passport
 bash scripts/setup.sh
-npx playwright install --with-deps chromium
 npm run verify:local
 ```
 
-Playwright의 OS 의존성 설치는 관리자 권한이 필요할 수 있다. 이 Ubuntu/WSL에서는 다음 방법으로 프로젝트 폴더에 필요한 라이브러리와 Chromium을 새로 받았다.
+설치 스크립트가 Java/Maven, Chromium, Ubuntu/WSL NSS/NSPR 라이브러리를 프로젝트 `.tools`에 준비하고 실제 브라우저 실행까지 확인한다. 테스트 실행기가 경로를 자동 적용하므로 별도 환경 변수 설정은 필요 없다. 다른 Linux 배포판의 추가 OS 의존성이 없으면 설치는 실패하며 해결 명령을 표시한다.
 
-```bash
-mkdir -p .tools/browser-libs
-(cd .tools/browser-libs && apt-get download libnspr4 libnss3 && for p in *.deb; do dpkg-deb -x "$p" .; done)
-PLAYWRIGHT_BROWSERS_PATH="$PWD/.tools/playwright" npx playwright install chromium
-PLAYWRIGHT_BROWSERS_PATH="$PWD/.tools/playwright" \
-LD_LIBRARY_PATH="$PWD/.tools/browser-libs/usr/lib/x86_64-linux-gnu" \
-npm run verify:local
-```
-
-이 두 라이브러리만으로 충분한지는 OS에 따라 다르다. 기본 검증 포트는 API 18082 / 웹 15174이며, 이미 사용 중이면 실패한다. VERIFY_API_PORT / VERIFY_WEB_PORT로 변경할 수 있다. 로그와 검증용 DB는 `.data/verify-*`에 남으며 Git에서 제외된다.
+기본 검증 포트는 API 18082 / 웹 15174이며, 이미 사용 중이면 실패한다. VERIFY_API_PORT / VERIFY_WEB_PORT로 변경할 수 있다. 로그와 검증용 DB는 `.data/verify-*`에 남으며 Git에서 제외된다.
 
 PostgreSQL/pgvector + EVM 테스트는 [testing.md](testing.md)의 확장 설치 후 `npm run test:integration`으로 재현한다. 이번에도 해당 apt 패키지를 새로 받아 실행했다.
 
@@ -50,3 +40,12 @@ PostgreSQL/pgvector + EVM 테스트는 [testing.md](testing.md)의 확장 설치
 - 실제 Codex ↔ Claude도 새 DB에서 새 Agent와 토큰을 발급하여 양방향 blind 표식 조회, 출처 확인, 양쪽 권한 철회 차단을 재검증했다. 기존 CLI 로그인만 사용했으며 기존 프로젝트 토큰/DB는 사용하지 않았다. [새 검증 증거](real-client-results.json).
 
 외부 공급자 API 키와 공개 테스트넷은 별도 설정 사항이다. 실제 임베딩 모델 품질이나 공개 체인 배포 성공을 이 결과로 주장하지 않는다. 실제 CLI 연결은 설치 및 계정 로그인이 필요하며, 저장소에 토큰을 포함하지 않는다. 새 Agent 등록 절차는 [real-clients.md](real-clients.md)를 따른다.
+
+## 2026-09-15 설치 자동화 재검증
+
+새 clone에 이번 설치 스크립트 변경만 적용하고 기존 `.tools`, `node_modules`, `.data`, `.env`는 복사하지 않았다. 같은 Ubuntu/WSL 호스트의 Node/npm과 Maven 다운로드 캐시는 사용했다.
+
+- `bash scripts/setup.sh`: Java/Maven, npm 의존성, 프로젝트 전용 Chromium, NSS/NSPR 다운로드와 브라우저 실행 검사 통과.
+- 환경 변수를 따로 지정하지 않은 `npm run verify:local`: 빌드, Java 8개, 계약 6개 하위 시나리오, 브라우저 3개, MCP 통과.
+- `npm run dev`: 기본 포트 웹 HTTP 200, API health 정상 응답 확인 후 종료.
+- 별도 PostgreSQL 통합, 유료 API, 공개 테스트넷은 이번 재검증 범위에 포함하지 않았다.
