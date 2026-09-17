@@ -344,6 +344,7 @@ function App() {
           </div>
           <button
             className="profile"
+            aria-label={owner ? "로그아웃" : "지갑 연결"}
             onClick={() =>
               owner
                 ? run(async () => {

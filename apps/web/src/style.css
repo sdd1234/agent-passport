@@ -91,6 +91,7 @@ svg {
   vertical-align: middle;
 }
 .sidebar {
+  overflow-y: auto;
   width: 246px;
   position: fixed;
   inset: 0 auto 0 0;

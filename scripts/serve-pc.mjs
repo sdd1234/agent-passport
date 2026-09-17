@@ -170,6 +170,19 @@ try {
     ".json": "application/json",
   };
   web = http.createServer(async (req, res) => {
+    // Keep browser cookies and the API's CSRF origin on one local address.
+    if (
+      req.headers.host === `127.0.0.1:${config.webPort}` &&
+      ["GET", "HEAD"].includes(req.method) &&
+      !(req.url === "/api" || req.url?.startsWith("/api/"))
+    ) {
+      res.writeHead(302, {
+        Location: origin + "/",
+        "Cache-Control": "no-store",
+      });
+      res.end();
+      return;
+    }
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Referrer-Policy", "same-origin");

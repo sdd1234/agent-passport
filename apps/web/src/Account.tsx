@@ -43,13 +43,28 @@ export function AccountLogin({
         </>
       ) : (
         <form
+          noValidate
           onSubmit={async (e) => {
             e.preventDefault();
-            setBusy(true);
             setError("");
+            if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,63}$/.test(username.trim())) {
+              setError(
+                "사용자 이름은 영문·숫자로 시작하는 3~64자이며, 영문·숫자·밑줄·마침표·하이픈을 사용할 수 있습니다.",
+              );
+              return;
+            }
+            if (password.length < 12 || password.length > 200) {
+              setError("비밀번호는 12~200자로 입력해 주세요.");
+              return;
+            }
+            if (mode === "recover" && !recovery.trim()) {
+              setError("복구 코드를 입력해 주세요.");
+              return;
+            }
+            setBusy(true);
             try {
               const r = await api("/account/" + mode, {
-                username,
+                username: username.trim(),
                 password,
                 ...(mode === "recover" ? { recoveryCode: recovery } : {}),
               });
@@ -59,7 +74,22 @@ export function AccountLogin({
                 setNewOwner(r.owner || "");
               } else await onLogin(r.owner);
             } catch (e) {
-              setError((e as Error).message);
+              const messages: Record<string, string> = {
+                INVALID_LOGIN: "사용자 이름 또는 비밀번호가 올바르지 않습니다.",
+                USERNAME_UNAVAILABLE:
+                  "이미 사용 중인 사용자 이름입니다. 다른 이름을 입력하거나 로그인해 주세요.",
+                TRY_LATER: "시도 횟수가 많습니다. 10분 뒤 다시 시도해 주세요.",
+                ORIGIN_DENIED:
+                  "접속 주소를 확인해 주세요. PC 서버는 http://localhost:5173에서 이용할 수 있습니다.",
+                INVALID_INPUT:
+                  "입력 내용을 확인해 주세요. 비밀번호는 12~200자입니다.",
+                SERVER_UNAVAILABLE:
+                  "서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+              };
+              setError(
+                messages[(e as Error).message] ||
+                  "요청을 완료하지 못했습니다. 입력 내용과 서버 연결을 확인해 주세요.",
+              );
             } finally {
               setBusy(false);
             }
@@ -70,7 +100,8 @@ export function AccountLogin({
             <input
               required
               autoComplete="username"
-              pattern="[a-zA-Z0-9][a-zA-Z0-9_.-]{2,63}"
+              minLength={3}
+              maxLength={64}
               placeholder="영문·숫자·밑줄 3~64자"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -100,6 +131,7 @@ export function AccountLogin({
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
+          <p className="muted">비밀번호는 12~200자입니다.</p>
           <button disabled={busy} className="btn primary">
             {mode === "login"
               ? "로그인"
