@@ -10,3 +10,11 @@ node_modules
 test-results
 playwright-report
 *.log
+
+.env.*
+!.env.example
+MEMORY.md
+*.dump
+*passport-import*.json
+*passport-folder-export*.json
+*passport-account-export*.json

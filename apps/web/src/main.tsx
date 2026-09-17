@@ -33,6 +33,8 @@ import {
 } from "lucide-react";
 import { BrowserProvider, Contract } from "ethers";
 import "./style.css";
+import { Folders } from "./Folders";
+import { AccountLogin, BillingPanel, AccountSettings } from "./Account";
 type Row = Record<string, any>;
 async function api(path: string, body?: unknown, method?: string) {
   const r = await fetch("/api" + path, {
@@ -52,6 +54,12 @@ const scopeLabels: Row = {
   research: "리서치",
 };
 const tabs = [
+  {
+    id: "folders",
+    label: "프로젝트 · 인수인계",
+    en: "Project folders",
+    icon: BookOpen,
+  },
   { id: "memories", label: "기억 탐색기", en: "Memory explorer", icon: Layers },
   {
     id: "playground",
@@ -67,6 +75,7 @@ const tabs = [
   },
   { id: "conflicts", label: "검토함", en: "Review inbox", icon: GitMerge },
   { id: "audit", label: "감사 로그", en: "Audit trail", icon: Activity },
+  { id: "billing", label: "요금제 · 사용량", en: "Plan & usage", icon: Wallet },
 ];
 const abi = [
   "function grantAccess(bytes32,bytes32,uint8,uint64)",
@@ -129,6 +138,7 @@ function App() {
         setHealth(await api("/health"));
         const me = await api("/me");
         setOwner(me.owner);
+        if (me.owner !== "demo-owner") setTab("folders");
         await refresh();
       } catch (e) {
         if ((e as Error).message !== "LOGIN_REQUIRED")
@@ -273,7 +283,10 @@ function App() {
         <div className="workspace">
           <span className="workspace-icon">J</span>
           <div>
-            Personal workspace<small>나만의 기억 공간</small>
+            Project workspace
+            <small>
+              {owner ? "개인 · 공유 프로젝트" : "로그인이 필요합니다"}
+            </small>
           </div>
           <ChevronDown size={15} />
         </div>
@@ -334,7 +347,7 @@ function App() {
             onClick={() =>
               owner
                 ? run(async () => {
-                    await api("/auth/logout", {});
+                    await api("/account/logout", {});
                     setOwner("");
                     setMemories([]);
                     setAgents([]);
@@ -370,7 +383,9 @@ function App() {
               <i className="dot" />
               {health.mode === "demo"
                 ? "Local demo · 체인 미연결"
-                : "EVM · " + health.chainId}
+                : health.mode === "service"
+                  ? "프로젝트 공유 서비스"
+                  : "EVM · " + health.chainId}
             </span>
             <button
               className="icon-btn"
@@ -390,15 +405,17 @@ function App() {
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {tab === "memories"
-                  ? "여러 AI가 함께 기억하고, 당신이 직접 관리하는 하나의 공간."
-                  : tab === "permissions"
-                    ? "어떤 Agent가 무엇을 읽고 쓸지, 당신이 결정합니다."
-                    : tab === "playground"
-                      ? "다른 Agent, 새로운 세션. 같은 기억으로 이어지는 대화."
-                      : tab === "conflicts"
-                        ? "새로운 기억과 바뀐 결정을 확인하고 승인하세요."
-                        : "모든 기억 접근과 동의 변경을 투명하게 확인하세요."}
+                {tab === "folders"
+                  ? "프로젝트의 맥락과 진행 상황을 정리하고 동료에게 공유하세요."
+                  : tab === "memories"
+                    ? "여러 AI가 함께 기억하고, 당신이 직접 관리하는 하나의 공간."
+                    : tab === "permissions"
+                      ? "어떤 Agent가 무엇을 읽고 쓸지, 당신이 결정합니다."
+                      : tab === "playground"
+                        ? "다른 Agent, 새로운 세션. 같은 기억으로 이어지는 대화."
+                        : tab === "conflicts"
+                          ? "새로운 기억과 바뀐 결정을 확인하고 승인하세요."
+                          : "모든 기억 접근과 동의 변경을 투명하게 확인하세요."}
               </p>
             </div>
             <div className="heading-actions">
@@ -471,6 +488,14 @@ function App() {
                   <br />
                   필요한 기억만, 허용한 Agent와 공유하세요.
                 </p>
+                <AccountLogin
+                  api={api}
+                  onLogin={async (id) => {
+                    setOwner(id);
+                    setTab("folders");
+                    await refresh();
+                  }}
+                />
                 <div className="welcome-buttons">
                   {health.mode === "demo" && (
                     <button
@@ -822,6 +847,19 @@ function App() {
                   )}
                 </div>
               )}
+              {tab === "folders" && <Folders api={api} />}
+              {tab === "billing" && (
+                <>
+                  <BillingPanel api={api} />
+                  <AccountSettings
+                    api={api}
+                    onDeleted={() => {
+                      setOwner("");
+                      setTab("folders");
+                    }}
+                  />
+                </>
+              )}
               {tab === "audit" && (
                 <div className="table-wrap">
                   <table>
@@ -1155,7 +1193,7 @@ function App() {
                 </p>
                 <code className="token">{anchor.root}</code>
                 <p>
-                  {health.mode === "demo"
+                  {health.mode !== "live"
                     ? "로컬에서 생성한 증명입니다. 블록체인에 기록되지 않았습니다."
                     : "지갑으로 서명하면 원문 없이 root만 계약에 기록합니다."}
                 </p>
@@ -1212,7 +1250,9 @@ function App() {
                   현재{" "}
                   {health.mode === "demo"
                     ? "데모 모드: H2 영속 DB, 로컬 권한, 규칙 기반 추출과 시뮬레이션 응답."
-                    : "실제 연동 모드: 지갑과 EVM 계약이 필요합니다."}{" "}
+                    : health.mode === "service"
+                      ? "서비스 모드: 개별 계정과 서버 권한으로 프로젝트를 공유합니다."
+                      : "실제 연동 모드: 지갑과 EVM 계약이 필요합니다."}{" "}
                   Playground의 실제 API 모드는 서버에 설정된 공급자 키를
                   사용합니다.
                 </p>

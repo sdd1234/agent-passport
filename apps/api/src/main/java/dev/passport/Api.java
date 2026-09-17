@@ -15,12 +15,14 @@ public class Api {
   final MemoryService mem;
   final Providers providers;
   final Chain chain;
+  final Accounts accounts;
 
-  public Api(Auth auth, MemoryService mem, Providers providers, Chain chain) {
+  public Api(Auth auth, MemoryService mem, Providers providers, Chain chain, Accounts accounts) {
     this.auth = auth;
     this.mem = mem;
     this.providers = providers;
     this.chain = chain;
+    this.accounts = accounts;
   }
 
   @ExceptionHandler(ResponseStatusException.class)
@@ -35,7 +37,7 @@ public class Api {
         "status",
         "ok",
         "mode",
-        Config.demo() ? "demo" : "live",
+        Config.env("APP_MODE", "demo"),
         "registry",
         chain.registry(),
         "chainId",
@@ -77,15 +79,13 @@ public class Api {
   }
 
   @PostMapping("/auth/logout")
-  Object logout(HttpServletRequest r) {
-    auth.origin(r);
-    r.getSession().invalidate();
-    return Map.of("ok", true);
+  Object logout(HttpServletRequest r, jakarta.servlet.http.HttpServletResponse response) {
+    return accounts.logout(r, response);
   }
 
   @GetMapping("/me")
   Object me(HttpServletRequest r) {
-    return Map.of("owner", auth.user(r), "mode", Config.demo() ? "demo" : "live");
+    return Map.of("owner", auth.user(r), "mode", Config.env("APP_MODE", "demo"));
   }
 
   @GetMapping("/agents")
@@ -346,7 +346,7 @@ public class Api {
     var rows =
         mem.db.queryForList("SELECT * FROM anchors WHERE owner_id=? AND id=?", owner, b.batchId());
     if (rows.isEmpty()) throw Auth.error(404, "ANCHOR_NOT_FOUND");
-    if (Config.demo()) throw Auth.error(400, "DEMO_HAS_NO_CHAIN_TX");
+    if (!Config.chainMode()) throw Auth.error(400, "CHAIN_MODE_REQUIRED");
     chain.verifyAnchorTransaction(
         owner, b.batchId(), rows.getFirst().get("root").toString(), b.txHash());
     chain.verifyAnchor(owner, b.batchId(), rows.getFirst().get("root").toString());

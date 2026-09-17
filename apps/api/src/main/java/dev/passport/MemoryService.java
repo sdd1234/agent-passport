@@ -16,6 +16,7 @@ public class MemoryService {
   final ObjectMapper json;
   final TransactionTemplate tx;
   final Embeddings embeddings;
+  final Plans plans;
 
   public MemoryService(
       JdbcTemplate db,
@@ -23,13 +24,15 @@ public class MemoryService {
       Chain chain,
       ObjectMapper json,
       TransactionTemplate tx,
-      Embeddings embeddings) {
+      Embeddings embeddings,
+      Plans plans) {
     this.db = db;
     this.crypto = crypto;
     this.chain = chain;
     this.json = json;
     this.tx = tx;
     this.embeddings = embeddings;
+    this.plans = plans;
   }
 
   String id() {
@@ -87,7 +90,7 @@ public class MemoryService {
     scope(scope);
     ownsAgent(owner, agent);
     boolean allow = false;
-    if (Config.demo()) {
+    if (!Config.chainMode()) {
       var rows =
           db.queryForList(
               "SELECT * FROM permissions WHERE owner_id=? AND agent_id=? AND scope=?",
@@ -121,7 +124,7 @@ public class MemoryService {
         || expires < 0
         || (expires != 0 && expires <= now() / 1000 && bits > 0))
       throw Auth.error(400, "INVALID_GRANT");
-    if (!Config.demo()) {
+    if (Config.chainMode()) {
       String sh = chain.scopeHash(owner, scope, salt(owner));
       chain.verifyPermissionTransaction(owner, agent, sh, bits, expires, hash);
       int actual =
@@ -171,7 +174,7 @@ public class MemoryService {
         p.put("agentHash", chain.agentHash(a.get("id").toString()));
         p.put("bits", rows.isEmpty() ? 0 : rows.getFirst().get("bits"));
         p.put("expiresAt", rows.isEmpty() ? 0 : rows.getFirst().get("expires_at"));
-        if (!Config.demo())
+        if (Config.chainMode())
           p.put(
               "bits",
               (chain.access(owner, a.get("id").toString(), p.get("scopeHash").toString(), 1)
@@ -294,6 +297,7 @@ public class MemoryService {
     if (p.importance() < 0.45) return Map.of("state", "skipped", "reason", "LOW_IMPORTANCE");
     return tx.execute(
         s -> {
+          plans.lock(owner);
           var rows =
               db.queryForList(
                   "SELECT * FROM memories WHERE owner_id=? AND project=? AND scope=? AND"
@@ -329,6 +333,7 @@ public class MemoryService {
               pid,
               "REVIEW",
               null);
+          plans.enforce(owner);
           return Map.<String, Object>of(
               "id", pid, "state", "pending", "kind", mid == null ? "proposal" : "conflict");
         });
@@ -359,6 +364,7 @@ public class MemoryService {
   public synchronized Map<String, Object> resolve(String owner, String pid, boolean accept) {
     return tx.execute(
         s -> {
+          plans.lock(owner);
           var rows =
               db.queryForList(
                   "SELECT * FROM proposals WHERE id=? AND owner_id=? AND state='pending' FOR"
@@ -422,6 +428,7 @@ public class MemoryService {
           embeddings.index(mid, expected + 1, p.content());
           db.update("UPDATE proposals SET state='accepted',memory_id=? WHERE id=?", mid, pid);
           audit(owner, "owner", "MEMORY_APPROVED", mid, "ALLOW", null);
+          plans.enforce(owner);
           return Map.<String, Object>of(
               "state", "accepted", "memoryId", mid, "version", expected + 1);
         });
@@ -520,6 +527,6 @@ public class MemoryService {
         "leafCount",
         leaves.size(),
         "mode",
-        Config.demo() ? "local-proof" : "awaiting-wallet");
+        !Config.chainMode() ? "local-proof" : "awaiting-wallet");
   }
 }

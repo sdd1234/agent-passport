@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS workspace_folders (id VARCHAR(80) PRIMARY KEY, owner_id VARCHAR(80) NOT NULL REFERENCES users(id), parent_id VARCHAR(80) REFERENCES workspace_folders(id), name VARCHAR(120) NOT NULL, project_path VARCHAR(1000) NOT NULL, handoff TEXT NOT NULL, revision INT NOT NULL DEFAULT 1, updated_at BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS folder_members (folder_id VARCHAR(80) NOT NULL REFERENCES workspace_folders(id), user_id VARCHAR(80) NOT NULL REFERENCES users(id), role VARCHAR(10) NOT NULL CHECK(role IN ('viewer','editor')), PRIMARY KEY(folder_id,user_id));
+CREATE INDEX IF NOT EXISTS folder_owner_idx ON workspace_folders(owner_id);
+CREATE INDEX IF NOT EXISTS folder_member_idx ON folder_members(user_id);
+CREATE TABLE IF NOT EXISTS accounts (user_id VARCHAR(80) PRIMARY KEY REFERENCES users(id), username VARCHAR(80) NOT NULL UNIQUE, password_hash VARCHAR(250) NOT NULL, recovery_hash VARCHAR(100) NOT NULL, created_at BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS account_sessions (token_hash VARCHAR(100) PRIMARY KEY, user_id VARCHAR(80) NOT NULL REFERENCES users(id), expires_at BIGINT NOT NULL);
+CREATE INDEX IF NOT EXISTS session_user_idx ON account_sessions(user_id);
+CREATE TABLE IF NOT EXISTS request_limits (bucket VARCHAR(100) PRIMARY KEY, hits INT NOT NULL, expires_at BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS folder_entries (id VARCHAR(80) PRIMARY KEY, folder_id VARCHAR(80) NOT NULL REFERENCES workspace_folders(id), title VARCHAR(200) NOT NULL, content TEXT NOT NULL, source TEXT NOT NULL, source_key VARCHAR(100) NOT NULL, kind VARCHAR(30) NOT NULL, state VARCHAR(20) NOT NULL, revision INT NOT NULL, bytes BIGINT NOT NULL, created_by VARCHAR(80) NOT NULL, updated_at BIGINT NOT NULL, UNIQUE(folder_id,source_key));
+CREATE INDEX IF NOT EXISTS entry_folder_idx ON folder_entries(folder_id);
+CREATE TABLE IF NOT EXISTS folder_entry_versions (entry_id VARCHAR(80) NOT NULL REFERENCES folder_entries(id), revision INT NOT NULL, content TEXT NOT NULL, title VARCHAR(200) NOT NULL, created_by VARCHAR(80) NOT NULL, updated_at BIGINT NOT NULL, PRIMARY KEY(entry_id,revision));
+CREATE TABLE IF NOT EXISTS folder_agent_grants (folder_id VARCHAR(80) NOT NULL REFERENCES workspace_folders(id), agent_id VARCHAR(80) NOT NULL, user_id VARCHAR(80) NOT NULL, bits INT NOT NULL, PRIMARY KEY(folder_id,agent_id));
+CREATE TABLE IF NOT EXISTS project_bindings (user_id VARCHAR(80) NOT NULL REFERENCES users(id), local_path VARCHAR(1000) NOT NULL, folder_id VARCHAR(80) NOT NULL REFERENCES workspace_folders(id), PRIMARY KEY(user_id,local_path));
+CREATE TABLE IF NOT EXISTS folder_invites (id VARCHAR(80) PRIMARY KEY, folder_id VARCHAR(80) NOT NULL REFERENCES workspace_folders(id), token_hash VARCHAR(100) NOT NULL UNIQUE, role VARCHAR(10) NOT NULL, expires_at BIGINT NOT NULL, created_by VARCHAR(80) NOT NULL);
+CREATE TABLE IF NOT EXISTS subscriptions (user_id VARCHAR(80) PRIMARY KEY REFERENCES users(id), customer_id VARCHAR(100) UNIQUE, subscription_id VARCHAR(100), status VARCHAR(40) NOT NULL, price_id VARCHAR(100), updated_at BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS billing_events (id VARCHAR(100) PRIMARY KEY, processed_at BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS folder_changes (id VARCHAR(80) PRIMARY KEY, folder_id VARCHAR(80) NOT NULL REFERENCES workspace_folders(id), payload TEXT NOT NULL, agent_id VARCHAR(80) NOT NULL, state VARCHAR(20) NOT NULL, created_at BIGINT NOT NULL);

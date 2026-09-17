@@ -1866,3 +1866,140 @@ td.mono {
     font-size: 7px;
   }
 }
+.folder-workspace form {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
+.folder-workspace label {
+  display: grid;
+  gap: 6px;
+}
+.folder-workspace input,
+.folder-workspace select,
+.folder-workspace textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d6d8dd;
+  border-radius: 8px;
+  font: inherit;
+}
+.folder-workspace button {
+  padding: 10px 14px;
+  border: 1px solid #d6d8dd;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.folder-workspace button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.folder-columns {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(0, 3fr);
+  gap: 24px;
+}
+.folder-columns nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.folder-columns nav button[aria-pressed="true"] {
+  background: #e4ebff;
+}
+.folder-workspace [role="alert"] {
+  color: #b42318;
+}
+@media (max-width: 700px) {
+  .folder-columns {
+    grid-template-columns: 1fr;
+  }
+}
+.account-panel {
+  margin: 24px 0;
+  max-width: 440px;
+}
+.account-panel form,
+.account-panel label {
+  display: grid;
+  gap: 10px;
+}
+.account-panel form {
+  gap: 16px;
+}
+.account-panel input {
+  padding: 12px;
+  border: 1px solid #d6d8dd;
+  border-radius: 8px;
+  width: 100%;
+}
+.account-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.recovery-code {
+  display: block;
+  overflow-wrap: anywhere;
+  background: #edf1f8;
+  padding: 16px;
+  margin: 12px 0;
+  user-select: all;
+}
+.folder-workspace details {
+  border: 1px solid #dce0e8;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.folder-workspace summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.folder-workspace pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 400px;
+  overflow: auto;
+}
+.folder-workspace small {
+  overflow-wrap: anywhere;
+}
+.folder-workspace input[type="checkbox"] {
+  width: auto;
+}
+.folder-workspace table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+.folder-workspace th,
+.folder-workspace td {
+  padding: 12px;
+  border-bottom: 1px solid #e0e4eb;
+  text-align: left;
+}
+.folder-entries {
+  border-top: 1px solid #dce0e8;
+  margin-top: 24px;
+  padding-top: 16px;
+}
+.entry-list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+.entry-list button {
+  text-align: left;
+  display: grid;
+  gap: 6px;
+}
+.entry-list span {
+  font-size: 12px;
+  color: #68748a;
+}
+.entry-detail {
+  background: #f7f9fc;
+  padding: 16px;
+  border-radius: 12px;
+}

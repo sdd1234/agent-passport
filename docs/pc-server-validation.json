@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-09-17T13:15:29.099Z",
+  "mode": "service",
+  "host": "local PC / WSL",
+  "database": "persistent PostgreSQL 16",
+  "checks": [
+    "built static web",
+    "individual signup",
+    "folder handoff saved",
+    "user systemd restart",
+    "session and content persistence",
+    "synthetic test account cleanup"
+  ],
+  "access": "loopback only",
+  "externalInternetAccess": false
+}

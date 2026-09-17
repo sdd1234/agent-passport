@@ -4,6 +4,21 @@
 
 `Agent_Passport_BlockAI26_기획서.pdf` 23쪽 전체를 기준으로 만든 반응형 프로토타입과 실행 가능한 MVP입니다. React 대시보드에서 기억을 승인하고, 다른 Agent가 같은 기억을 조회하며, READ를 철회하면 서버가 다음 요청부터 차단합니다.
 
+## 프로젝트 기억 공유 서비스
+
+WSL의 Codex·Claude 기억을 가져와 프로젝트별 폴더로 정리하고, 서버에 저장해 동료에게 공유·인수인계할 수 있습니다. 개별 계정, 초대/읽기·편집 권한, 기억 승인/버전 관리, 폴더 기반 MCP, Free/Pro 한도와 Stripe 구독 어댑터를 구현했습니다.
+
+- **[내 PC / WSL을 서버로 실행](docs/pc-server.md)**: Docker 없이 PostgreSQL·API·웹 실행, 재시작/백업.
+- **[서비스 사용법](docs/service-guide.md)**: 가입 → 가져오기/프로젝트 분류 → 폴더 공유 → Codex·Claude 연결.
+- **[배포·백업·결제 설정](docs/deployment.md)**: PostgreSQL, HTTPS, 마이그레이션, 복원 절차.
+- **[현재 구현과 운영 경계](docs/service-roadmap.md)** · **[서비스 검증 결과](docs/service-validation.json)**.
+
+**공개 운영 배포와 실제 결제는 아직 완료하지 않았습니다.** 서버·도메인·결제 계정·판매 가격 설정이 필요합니다. 제공된 요금제 한도는 변경 가능한 개발 기본값입니다. 데모 로그인은 공통 계정이며 실제 협업에는 회원가입을 사용하세요.
+
+![프로젝트 폴더와 가져오기](docs/service-projects.png)
+
+아래에는 기존 기억·RAG·EVM MVP의 설명도 함께 유지합니다. 서비스 모드(`APP_MODE=service`)는 계정/SQL 권한을 사용하고, EVM 지갑 권한 모드(`live`)와 구분합니다.
+
 ## 문서와 첫 사용 안내
 
 - **[처음 사용하는 방법](docs/quickstart-ko.md)**: Codex 저장 → 대시보드 승인 → Claude 조회를 그대로 따라 하기.
@@ -64,7 +79,7 @@ GPT 패널의 `프로젝트 스택 기억하기`로 후보를 새로 생성할 �
 
 | 항목 | 로컬 데모 | 실제 연동 모드 |
 | --- | --- | --- |
-| UI | 반응형 React/TypeScript 5개 화면 | 동일 |
+| UI | 반응형 React/TypeScript 대시보드 | 동일 |
 | API/저장 | Spring Boot 3.5 + H2 파일 DB | Spring Boot + PostgreSQL |
 | 원문 | AES-256-GCM 암호화 | AES-256-GCM 암호화 |
 | 기억 추출 | Spring Boot/Node.js/PostgreSQL 시연 규칙 | 선택한 OpenAI/Anthropic API로 JSON 후보 추출 |
@@ -73,7 +88,7 @@ GPT 패널의 `프로젝트 스택 기억하기`로 후보를 새로 생성할 �
 | 로그인 | 명시적 로컬 데모 로그인 또는 지갑 | SIWE 지갑 서명 + HttpOnly 세션 |
 | 권한 | 로컬 영속 DB, 서버 강제 검사 | 지갑 트랜잭션 + EVM 계약 상태 직접 검사 |
 | 무결성 | salted Merkle root 로컬 생성 | 지갑으로 root 앵커 기록 및 receipt 검증 |
-| MCP | 실제 stdio MCP 서버/8개 도구 | 동일 Agent 토큰과 API로 권한 강제 |
+| MCP | 실제 stdio MCP 서버/11개 도구 | 동일 Agent 토큰과 API로 권한 강제 |
 
 **검증된 것**: 브라우저 시연, 백엔드 보안/버전 테스트, 실제 PostgreSQL/pgvector SQL, 로컬 EVM 계약과 live-mode API 통합, MCP 프로토콜 왕복.
 
@@ -159,7 +174,9 @@ Live 권한 동기화 API는 실제 성공 receipt, 발신 지갑, 계약 주소
 }
 ```
 
-지원 도구: `search_memory`, `get_project_context`, `save_memory`, `propose_memory`, `update_memory`, `list_memory_versions`, `list_scopes`, `request_scope_access`.
+추가 폴더 도구: `get_folder_context`, `search_folder`, `propose_folder_memory`.
+
+기존 기억 도구: `search_memory`, `get_project_context`, `save_memory`, `propose_memory`, `update_memory`, `list_memory_versions`, `list_scopes`, `request_scope_access`.
 
 `save_memory`도 승인이 필요한 후보를 만듭니다. `request_scope_access`는 소유자의 UI 승인 안내를 반환하며 스스로 권한을 획득하지 않습니다. MCP는 stdio 방식입니다. Remote HTTP MCP/OAuth 서버는 이번 구현에 포함하지 않았고, 실제 AI Playground는 문서에 허용된 backend adapter 경로를 사용합니다.
 

@@ -43,7 +43,7 @@ try {
       },
     }),
   );
-  assert.equal((await client.listTools()).tools.length, 8);
+  assert.equal((await client.listTools()).tools.length, 11);
   const denied = await client.callTool({
     name: "search_memory",
     arguments: { query: "MCP", scope: "development" },
@@ -95,7 +95,7 @@ try {
     true,
   );
   console.log(
-    "PASS: MCP initialize + 8 tools + default deny + proposal + owner approval + shared search + revoked history denial",
+    "PASS: MCP initialize + 11 tools + default deny + proposal + owner approval + shared search + revoked history denial",
   );
 } finally {
   await client.close();

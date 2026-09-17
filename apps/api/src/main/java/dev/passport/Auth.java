@@ -27,7 +27,18 @@ public class Auth {
   }
 
   public String user(HttpServletRequest req) {
-    Object id = req.getSession().getAttribute("owner");
+    if (req.getHeader("Authorization") != null) throw error(401, "LOGIN_REQUIRED");
+    if (req.getCookies() != null)
+      for (var cookie : req.getCookies()) {
+        if (!Accounts.COOKIE.equals(cookie.getName())) continue;
+        var sessions =
+            db.queryForList(
+                "SELECT user_id FROM account_sessions WHERE token_hash=? AND expires_at>?",
+                Crypto.hash(cookie.getValue()),
+                System.currentTimeMillis());
+        if (!sessions.isEmpty()) return sessions.getFirst().get("user_id").toString();
+      }
+    Object id = req.getSession(false) == null ? null : req.getSession(false).getAttribute("owner");
     if (id == null) throw error(401, "LOGIN_REQUIRED");
     return id.toString();
   }
@@ -35,8 +46,11 @@ public class Auth {
   public void origin(HttpServletRequest req) {
     String o = req.getHeader("Origin");
     if (o != null && !o.equals(Config.origin())) throw error(403, "ORIGIN_DENIED");
-    if (req.getHeader("Authorization") == null && !"1".equals(req.getHeader("X-Passport-Request")))
-      throw error(403, "CSRF_HEADER_REQUIRED");
+    if (req.getHeader("Authorization") != null) {
+      identity(req);
+      return;
+    }
+    if (!"1".equals(req.getHeader("X-Passport-Request"))) throw error(403, "CSRF_HEADER_REQUIRED");
   }
 
   public Identity identity(HttpServletRequest req) {

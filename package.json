@@ -18,7 +18,13 @@
     "format": "prettier --write apps/web/src apps/mcp-server/index.ts scripts/*.mjs contracts/*.mjs",
     "agent:codex": "node scripts/agent-client.mjs codex",
     "agent:claude": "node scripts/agent-client.mjs claude",
-    "verify:local": "bash scripts/verify-local.sh"
+    "verify:local": "bash scripts/verify-local.sh",
+    "memory:export": "node scripts/export-local.mjs",
+    "test:importer": "node --test scripts/test-importer.mjs",
+    "client:setup": "node scripts/setup-client.mjs",
+    "verify:service": "bash scripts/verify-service.sh",
+    "server:start": "bash scripts/serve-pc.sh",
+    "server:install": "bash scripts/install-pc-service.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

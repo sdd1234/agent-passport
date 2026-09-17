@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: passport
+      POSTGRES_USER: passport
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD}
+    volumes: ["passport-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U passport"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      APP_MODE: service
+      DEPLOYMENT: production
+      TRUST_PROXY_HEADER: "true"
+      APP_ORIGIN: https://${PASSPORT_DOMAIN:?Set PASSPORT_DOMAIN}
+      BIND_ADDRESS: 0.0.0.0
+      DATABASE_URL: jdbc:postgresql://postgres:5432/passport
+      DATABASE_USER: passport
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      MEMORY_ENCRYPTION_KEY: ${MEMORY_ENCRYPTION_KEY:?Set MEMORY_ENCRYPTION_KEY}
+      COOKIE_SECURE: "true"
+      SIGNUP_ENABLED: ${SIGNUP_ENABLED:-true}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      FREE_FOLDERS: ${FREE_FOLDERS:-20}
+      FREE_ENTRIES: ${FREE_ENTRIES:-500}
+      FREE_STORAGE_BYTES: ${FREE_STORAGE_BYTES:-10485760}
+      FREE_SHARES: ${FREE_SHARES:-10}
+      PRO_FOLDERS: ${PRO_FOLDERS:-1000}
+      PRO_ENTRIES: ${PRO_ENTRIES:-50000}
+      PRO_STORAGE_BYTES: ${PRO_STORAGE_BYTES:-1073741824}
+      PRO_SHARES: ${PRO_SHARES:-1000}
+    depends_on:
+      postgres: {condition: service_healthy}
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+    restart: unless-stopped
+    depends_on: [api]
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      PASSPORT_DOMAIN: ${PASSPORT_DOMAIN}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web]
+volumes:
+  passport-db:
+  caddy-data:
+  caddy-config:

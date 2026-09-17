@@ -16,3 +16,9 @@ contracts/deployment.json
 *.pem
 *.key
 .DS_Store
+
+# User-selected memory exports
+*passport-import*.json
+*.dump
+*passport-folder-export*.json
+*passport-account-export*.json

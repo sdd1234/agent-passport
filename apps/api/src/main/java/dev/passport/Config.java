@@ -9,6 +9,10 @@ public final class Config {
     return env("APP_MODE", "demo").equals("demo");
   }
 
+  public static boolean chainMode() {
+    return env("APP_MODE", "demo").equals("live");
+  }
+
   public static String origin() {
     return env("APP_ORIGIN", "http://localhost:5173");
   }
