@@ -1,15 +1,21 @@
+# 일회용 코드 공유 검증 (2026-09-18)
+
+- `PairingIntegrationTest`: 양쪽 확인 전 접근 거부, 잘못된 코드, 제3자 선점/조회 차단, 만료, 취소, 재발급, 일회용 재사용 거부, 철회 후 재연결 차단, 시도 제한, 기존 지갑/앵커/초대 API 제거.
+- `eval/browser/service.spec.ts`: 두 독립 브라우저 계정으로 코드 발급·입력·소유자 확인·읽기 공유·철회 검증.
+- `npm run verify:local`: 빌드, Java, GUI, MCP 회귀 검증.
+- `npm run verify:service`: 별도 PostgreSQL에서 마이그레이션·공유·MCP·재시작 검증. 실제 CLI 및 백업/복원은 추가 설정 시 실행하며 결과 JSON의 플래그로 구분합니다.
+- 기존 `integration-results.json` 등의 EVM 기록은 제거 전 역사 기록이며 현재 기능의 검증 근거가 아닙니다.
+
 # Test coverage
 
-- Java integration: cross-agent recall/revoke/regrant/expiry, conflict history and optimistic concurrency, sensitive approval, owner isolation, impersonation, owner-only grants, CSRF origin/header, SIWE replay, content encryption/deletion, salted root determinism.
-- Solidity on local Ganache EVM: default deny, invalid masks, events, grant, cross-owner isolation, revoke, regrant, exact expiry boundary, immutable owner-scoped anchors.
+- Java integration: cross-agent recall/revoke/regrant/expiry, conflict history and optimistic concurrency, sensitive approval, owner isolation, impersonation, owner-only grants, CSRF origin/header, content encryption/deletion.
 - Playwright (3 scenarios): GPT creates two new memories with verified source, owner approves, fresh Claude recalls; owner UI approval → Claude recall → revoke → deny → regrant → allow; manual memory proposal/approval; page reload; 390px mobile overflow.
 - MCP SDK client: actual initialization, tool discovery, denied query, propose/approve/search, revoked history request.
 - PostgreSQL + pgvector: actual database and vector extension, SQL cosine ranking with **synthetic vectors** replacing the paid embedding API, scope/project filters and vector deletion.
-- Live mode integration: actual Java server + PostgreSQL + local EVM + EOA SIWE signature + successful consent receipt + credential search + direct contract revoke + regrant + anchored root + forged expiry rejection.
 
 ## Commands
 
-Use README commands for the ordinary tests. To reproduce the additional PostgreSQL/vector/live integration on Linux x64, `embedded-postgres` is pinned as a development dependency. The supplied environment has the Ubuntu pgvector extension extracted into `.tools/pgvector`; nothing is installed system-wide.
+Use README commands for the ordinary tests. To reproduce the additional PostgreSQL/vector integration on Linux x64, `embedded-postgres` is pinned as a development dependency. The supplied environment has the Ubuntu pgvector extension extracted into `.tools/pgvector`; nothing is installed system-wide.
 
 ```bash
 mkdir -p .tools/pgvector
@@ -22,11 +28,11 @@ cp .tools/pgvector/usr/share/postgresql/16/extension/vector* node_modules/@embed
 node scripts/test-integration.mjs
 ```
 
-This starts isolated services on ports 55439, 18545 and 18080; it shuts them down afterward. Database and chain are test-only. The standard UI demo stays on 5173/8080. No paid provider requests occur in this integration test. On other operating systems, run equivalent tests with PostgreSQL/pgvector containers and the configured Java test environment.
+This starts isolated services on port 55439; it shuts them down afterward. The database is test-only. The standard UI demo stays on 5173/8080. No paid provider requests occur in this integration test. On other operating systems, run equivalent tests with PostgreSQL/pgvector containers and the configured Java test environment.
 
 Browser dependencies missing on this WSL were added with `apt-get download libnspr4 libnss3` + `dpkg-deb -x`, and selected using `LD_LIBRARY_PATH`. On a normal workstation Playwright's documented browser dependency installer may be used instead.
 
-Real OpenAI/Anthropic generation/extraction, live embedding quality and public-testnet confirmations still require configured external credentials. These are deliberately not included in the local pass count or represented as achieved product KPIs.
+Real OpenAI/Anthropic generation/extraction, live embedding quality still require configured external credentials. These are deliberately not included in the local pass count or represented as achieved product KPIs.
 
 ## 추가 실제 클라이언트 검증
 

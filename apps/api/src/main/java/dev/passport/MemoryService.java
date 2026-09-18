@@ -5,14 +5,12 @@ import java.util.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.web3j.crypto.Hash;
 
 @Service
 public class MemoryService {
   public static final List<String> SCOPES = List.of("development", "personal", "research");
   final JdbcTemplate db;
   final Crypto crypto;
-  final Chain chain;
   final ObjectMapper json;
   final TransactionTemplate tx;
   final Embeddings embeddings;
@@ -21,14 +19,12 @@ public class MemoryService {
   public MemoryService(
       JdbcTemplate db,
       Crypto crypto,
-      Chain chain,
       ObjectMapper json,
       TransactionTemplate tx,
       Embeddings embeddings,
       Plans plans) {
     this.db = db;
     this.crypto = crypto;
-    this.chain = chain;
     this.json = json;
     this.tx = tx;
     this.embeddings = embeddings;
@@ -90,7 +86,7 @@ public class MemoryService {
     scope(scope);
     ownsAgent(owner, agent);
     boolean allow = false;
-    if (!Config.chainMode()) {
+    {
       var rows =
           db.queryForList(
               "SELECT * FROM permissions WHERE owner_id=? AND agent_id=? AND scope=?",
@@ -104,7 +100,7 @@ public class MemoryService {
             (((Number) p.get("bits")).intValue() & bit) == bit
                 && (expiry == 0 || expiry > now() / 1000);
       }
-    } else allow = chain.access(owner, agent, chain.scopeHash(owner, scope, salt(owner)), bit);
+    }
     audit(
         owner,
         agent,
@@ -124,13 +120,6 @@ public class MemoryService {
         || expires < 0
         || (expires != 0 && expires <= now() / 1000 && bits > 0))
       throw Auth.error(400, "INVALID_GRANT");
-    if (Config.chainMode()) {
-      String sh = chain.scopeHash(owner, scope, salt(owner));
-      chain.verifyPermissionTransaction(owner, agent, sh, bits, expires, hash);
-      int actual =
-          (chain.access(owner, agent, sh, 1) ? 1 : 0) | (chain.access(owner, agent, sh, 2) ? 2 : 0);
-      if (actual != bits) throw Auth.error(409, "CHAIN_STATE_NOT_CONFIRMED");
-    }
     tx.executeWithoutResult(
         s -> {
           db.update(
@@ -170,20 +159,9 @@ public class MemoryService {
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("agentId", a.get("id"));
         p.put("scope", s);
-        p.put("scopeHash", chain.scopeHash(owner, s, salt(owner)));
-        p.put("agentHash", chain.agentHash(a.get("id").toString()));
         p.put("bits", rows.isEmpty() ? 0 : rows.getFirst().get("bits"));
         p.put("expiresAt", rows.isEmpty() ? 0 : rows.getFirst().get("expires_at"));
-        if (Config.chainMode())
-          p.put(
-              "bits",
-              (chain.access(owner, a.get("id").toString(), p.get("scopeHash").toString(), 1)
-                      ? 1
-                      : 0)
-                  | (chain.access(owner, a.get("id").toString(), p.get("scopeHash").toString(), 2)
-                      ? 2
-                      : 0));
-        else if (((Number) p.get("expiresAt")).longValue() != 0
+        if (((Number) p.get("expiresAt")).longValue() != 0
             && ((Number) p.get("expiresAt")).longValue() <= now() / 1000) p.put("bits", 0);
         out.add(p);
       }
@@ -487,46 +465,5 @@ public class MemoryService {
     }
     candidates.sort(Comparator.comparingDouble(m -> -((Number) m.get("score")).doubleValue()));
     return candidates.stream().limit(topK).toList();
-  }
-
-  public synchronized Map<String, Object> anchor(String owner) {
-    List<String> leaves = new ArrayList<>();
-    for (var m : list(owner, null, null, null))
-      for (var v : versions(owner, m.get("id").toString()))
-        leaves.add(
-            Hash.sha3String(
-                m.get("id")
-                    + ":"
-                    + v.get("version")
-                    + ":"
-                    + v.get("content_hash")
-                    + ":"
-                    + salt(owner)));
-    if (leaves.isEmpty()) throw Auth.error(400, "NO_MEMORIES");
-    Collections.sort(leaves);
-    List<String> layer = new ArrayList<>(leaves);
-    while (layer.size() > 1) {
-      List<String> next = new ArrayList<>();
-      for (int i = 0; i < layer.size(); i += 2) {
-        String a = layer.get(i), b = layer.get(Math.min(i + 1, layer.size() - 1));
-        String pair =
-            a.compareTo(b) <= 0 ? a.substring(2) + b.substring(2) : b.substring(2) + a.substring(2);
-        next.add(Hash.sha3("0x" + pair));
-      }
-      layer = next;
-    }
-    String batch = Hash.sha3String(id()), root = layer.getFirst();
-    db.update(
-        "INSERT INTO anchors VALUES(?,?,?,?,?,?)", batch, owner, root, encode(leaves), null, now());
-    audit(owner, "owner", "ANCHOR_PREPARED", batch, "ALLOW", null);
-    return Map.of(
-        "batchId",
-        batch,
-        "root",
-        root,
-        "leafCount",
-        leaves.size(),
-        "mode",
-        !Config.chainMode() ? "local-proof" : "awaiting-wallet");
   }
 }

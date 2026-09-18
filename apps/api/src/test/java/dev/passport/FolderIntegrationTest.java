@@ -54,12 +54,32 @@ class FolderIntegrationTest {
   }
 
   void share(String role) throws Exception {
+    var pair =
+        json.readTree(
+            mvc.perform(
+                    post("/api/pairings")
+                        .session(owner)
+                        .header("X-Passport-Request", "1")
+                        .contentType("application/json")
+                        .content(json.writeValueAsBytes(Map.of("folderId", id, "role", role))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
+    String body = json.writeValueAsString(Map.of("code", pair.get("code").asText()));
     mvc.perform(
-            post("/api/folders/" + id + "/members")
+            post("/api/pairings/join")
+                .session(guest)
+                .header("X-Passport-Request", "1")
+                .contentType("application/json")
+                .content(body))
+        .andExpect(status().isOk());
+    mvc.perform(
+            post("/api/pairings/" + pair.get("id").asText() + "/confirm")
                 .session(owner)
                 .header("X-Passport-Request", "1")
                 .contentType("application/json")
-                .content(json.writeValueAsString(Map.of("userId", guestId, "role", role))))
+                .content(body))
         .andExpect(status().isOk());
   }
 

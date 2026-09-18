@@ -31,9 +31,6 @@ services:
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
       SEARCH_MODE: ${SEARCH_MODE:-lexical}
-      REGISTRY_ADDRESS: ${REGISTRY_ADDRESS:-}
-      EVM_RPC_URL: ${EVM_RPC_URL:-http://host.docker.internal:8545}
-      CHAIN_ID: ${CHAIN_ID:-31337}
     extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       postgres:

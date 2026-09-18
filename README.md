@@ -2,11 +2,11 @@
 
 **AI는 바꿔도, 나에 대한 기억은 내가 가지고 다닌다.**
 
-`Agent_Passport_BlockAI26_기획서.pdf` 23쪽 전체를 기준으로 만든 반응형 프로토타입과 실행 가능한 MVP입니다. React 대시보드에서 기억을 승인하고, 다른 Agent가 같은 기억을 조회하며, READ를 철회하면 서버가 다음 요청부터 차단합니다.
+프로젝트별 AI 기억과 작업 맥락을 정리하고 공유하는 서비스입니다. React 대시보드에서 기억을 승인하고, 다른 Agent가 같은 기억을 조회하며, READ를 철회하면 서버가 다음 요청부터 차단합니다.
 
 ## 프로젝트 기억 공유 서비스
 
-WSL의 Codex·Claude 기억을 가져와 프로젝트별 폴더로 정리하고, 서버에 저장해 동료에게 공유·인수인계할 수 있습니다. 개별 계정, 초대/읽기·편집 권한, 기억 승인/버전 관리, 폴더 기반 MCP, Free/Pro 한도와 Stripe 구독 어댑터를 구현했습니다.
+WSL의 Codex·Claude 기억을 가져와 프로젝트별 폴더로 정리하고, 서버에 저장해 동료에게 공유·인수인계할 수 있습니다. 개별 계정, 양쪽 일회용 코드 확인/읽기·편집 권한, 기억 승인/버전 관리, 폴더 기반 MCP, Free/Pro 한도와 Stripe 구독 어댑터를 구현했습니다.
 
 - **[내 PC / WSL을 서버로 실행](docs/pc-server.md)**: Docker 없이 PostgreSQL·API·웹 실행, 재시작/백업.
 - **[서비스 사용법](docs/service-guide.md)**: 가입 → 가져오기/프로젝트 분류 → 폴더 공유 → Codex·Claude 연결.
@@ -17,12 +17,12 @@ WSL의 Codex·Claude 기억을 가져와 프로젝트별 폴더로 정리하고,
 
 ![프로젝트 폴더와 가져오기](docs/service-projects.png)
 
-아래에는 기존 기억·RAG·EVM MVP의 설명도 함께 유지합니다. 서비스 모드(`APP_MODE=service`)는 계정/SQL 권한을 사용하고, EVM 지갑 권한 모드(`live`)와 구분합니다.
+2026-09-18부터 블록체인과 지갑 인증은 제거했습니다. 서비스 모드(`APP_MODE=service`)는 개별 계정과 서버 권한 검사를 사용합니다. 이전 초대 링크는 무효화되며 양쪽 일회용 코드 확인으로 공유합니다.
 
 ## 문서와 첫 사용 안내
 
 - **[처음 사용하는 방법](docs/quickstart-ko.md)**: Codex 저장 → 대시보드 승인 → Claude 조회를 그대로 따라 하기.
-- **[전체 문서 안내](docs/README.md)**: 파싱·저장·기억 선별·RAG·블록체인·긴 세션 설계.
+- **[전체 문서 안내](docs/README.md)**: 파싱·저장·기억 선별·RAG·공유·긴 세션 설계.
 - **[현재 적용 상태](docs/current-state.md)**: 구현/검증/미구현 구분.
 - **[다음 구현 순서](docs/roadmap.md)**: 빠진 기능과 완료 기준.
 
@@ -85,14 +85,11 @@ GPT 패널의 `프로젝트 스택 기억하기`로 후보를 새로 생성할 �
 | 기억 추출 | Spring Boot/Node.js/PostgreSQL 시연 규칙 | 선택한 OpenAI/Anthropic API로 JSON 후보 추출 |
 | 응답 | 검색된 기억을 보여주는 시뮬레이터 | OpenAI Responses / Anthropic Messages |
 | 검색 | lexical + metadata ranking | pgvector cosine + metadata ranking |
-| 로그인 | 명시적 로컬 데모 로그인 또는 지갑 | SIWE 지갑 서명 + HttpOnly 세션 |
-| 권한 | 로컬 영속 DB, 서버 강제 검사 | 지갑 트랜잭션 + EVM 계약 상태 직접 검사 |
-| 무결성 | salted Merkle root 로컬 생성 | 지갑으로 root 앵커 기록 및 receipt 검증 |
-| MCP | 실제 stdio MCP 서버/11개 도구 | 동일 Agent 토큰과 API로 권한 강제 |
+| 로그인 | 로컬 데모 계정 | 개별 계정 + HttpOnly 세션 |
+| 권한 | 로컬 DB 검사 | 서버 DB에서 매 요청 검사 |
+| 공유 | 별도 계정으로 검증 | 양쪽 일회용 코드 확인, 읽기/편집 권한 |
 
-**검증된 것**: 브라우저 시연, 백엔드 보안/버전 테스트, 실제 PostgreSQL/pgvector SQL, 로컬 EVM 계약과 live-mode API 통합, MCP 프로토콜 왕복.
-
-**외부 설정이 필요한 것**: OpenAI/Anthropic 유료 API의 실제 응답, 실제 임베딩 품질, 공개 테스트넷 배포와 브라우저 지갑 연결. Playground용 API 키·모델 ID·테스트넷 지갑이 제공되지 않아 직접 API adapter를 호출하거나 공개 테스트넷에 배포하지 않았습니다. 실제 Codex/Claude Code는 기존 로그인으로 MCP 호출을 검증했습니다. 로컬 EVM 테스트와 고정 임베딩을 실제 공급자 성능으로 표시하지 않습니다. 목표 KPI(Recall ≥90%, conflict ≥85%, P95 <1.5s)의 실데이터 달성을 주장하지 않습니다.
+외부 접속/HTTPS/도메인과 실결제는 별도 설정이 필요합니다. 실제 임베딩 품질과 유료 API 응답은 별도 검증 대상입니다.
 
 ## 실제 AI 연결
 
@@ -130,30 +127,14 @@ EMBEDDING_MODEL=text-embedding-3-small
 
 벡터 모델은 1536차원 `dimensions` 요청을 지원해야 합니다. 승인 시 임베딩을 생성하고 PostgreSQL에 저장합니다. 임베딩 실패 시 승인은 롤백되어 후보가 유지됩니다. 새 DB의 승인 흐름으로 vector 기능을 검증할 수 있습니다. 기존 데이터의 일괄 재색인/이전은 미구현이며, 같은 내용 재저장은 duplicate가 되어 재색인을 보장하지 않습니다. H2에서는 `SEARCH_MODE=lexical`을 사용합니다. 벡터 검색은 승인된 내용을 임베딩 공급자에게 보내므로 해당 설정을 사용자가 선택해야 합니다.
 
-## 지갑 + EVM
+## 일회용 코드로 폴더 공유
 
-```bash
-# 로컬 개발 체인 (테스트 전용 지갑)
-npx ganache --server.host 127.0.0.1 --chain.chainId 31337
-# 다른 터미널: 첫 unlocked 로컬 테스트 계정으로 배포
-npm run contracts:deploy
-```
+1. 양쪽 PC에서 같은 서버에 각자의 계정으로 로그인합니다.
+2. 보내는 쪽은 폴더에서 읽기/편집 권한을 선택하고 **공유 코드 발급**을 누릅니다.
+3. 받는 쪽은 **일회용 코드로 공유받기**에 전달받은 12자리 코드를 입력합니다.
+4. 보내는 쪽에 표시된 상대 계정을 확인하고, 같은 코드를 입력해 **상대 확인 후 공유 연결**을 누릅니다.
 
-출력된 계약 주소를 설정합니다.
-
-```dotenv
-APP_MODE=live
-EVM_RPC_URL=http://127.0.0.1:8545
-CHAIN_ID=31337
-REGISTRY_ADDRESS=배포한_계약_주소
-MEMORY_ENCRYPTION_KEY=32바이트_키의_base64
-```
-
-서버 재시작 → 브라우저 지갑 네트워크를 Chain ID 31337로 설정 → **지갑으로 로그인** → GPT/Claude Agent 등록 → 접근 권한에서 READ/WRITE 부여. 새 지갑의 기억 공간은 비어 있습니다. 새 Agent는 기본 차단 상태입니다.
-
-공개 EVM 테스트넷은 RPC/CHAIN_ID와 테스트용 DEPLOYER_PRIVATE_KEY를 설정한 후 같은 배포 스크립트를 사용합니다. `.env`와 `contracts/deployment.json`은 버전 관리에서 제외됩니다. 계약에는 원문과 scope 이름이 아닌 사용자별 salted scope hash, 권한, 만료, Merkle root만 저장됩니다.
-
-Live 권한 동기화 API는 실제 성공 receipt, 발신 지갑, 계약 주소, calldata, chain ID를 검증합니다. 검색은 매번 계약을 읽기 때문에 DB 캐시를 수정해도 권한을 얻을 수 없으며, RPC 장애 시 허용하지 않습니다. 이 단순한 MVP 방식은 요청량이 클 때 event cache보다 느릴 수 있습니다.
+코드는 10분간 한 번만 사용할 수 있습니다. 양쪽 확인 전에는 폴더를 읽을 수 없습니다. 코드를 취소하거나 재발급하면 이전 대기 요청은 무효입니다. 연결 후에는 공유를 철회할 때까지 권한이 유지되며 하위 폴더는 별도로 공유해야 합니다. 현재 PC 서버의 localhost 주소는 다른 PC에서 접근할 수 없으므로 외부 공유에는 서버 접속 경로 설정이 필요합니다.
 
 ## MCP 연결
 
@@ -188,7 +169,6 @@ Live 권한 동기화 API는 실제 성공 receipt, 발신 지갑, 계약 주소
 npm run build
 source scripts/java-env.sh
 mvn -q -f apps/api/pom.xml test
-npm run test:contracts
 # npm run dev 실행 상태에서
 npm run test:e2e
 node scripts/test-mcp.mjs
@@ -196,15 +176,14 @@ node scripts/test-mcp.mjs
 
 브라우저 테스트는 `.tools/playwright`와 `.tools/browser-libs`를 자동으로 사용합니다. `LD_LIBRARY_PATH`를 직접 지정할 필요가 없습니다. 다운로드 파일과 개인 DB는 Git에 포함되지 않으며 설치 시 생성됩니다.
 
-PostgreSQL/pgvector + live API/EVM 통합 테스트는 [통합 검증 안내](docs/testing.md)를 참고하세요. [검증 결과](docs/integration-results.json)에는 실제 검증과 외부 미검증 항목을 구분했습니다.
+PostgreSQL/pgvector 통합 테스트는 [통합 검증 안내](docs/testing.md)를 참고하세요. [검증 결과](docs/integration-results.json)에는 실제 검증과 외부 미검증 항목을 구분했습니다.
 
 ## 구조
 
 ```text
-apps/web/           React 대시보드 / 지갑 UI
+apps/web/           React 대시보드 / 계정·공유 UI
 apps/api/           Spring Boot 인증, 권한, 기억, 버전, AI adapter, 검색
 apps/mcp-server/    TypeScript stdio MCP / Agent 토큰 바인딩
-contracts/         Solidity registry / 배포 / 실제 EVM 테스트
 infra/             Docker Compose / nginx / Dockerfiles
 scripts/           실행 / 설치 / 통합 테스트
 eval/browser/      실제 브라우저 시연 테스트

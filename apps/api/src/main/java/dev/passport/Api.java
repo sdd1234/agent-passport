@@ -14,14 +14,12 @@ public class Api {
   final Auth auth;
   final MemoryService mem;
   final Providers providers;
-  final Chain chain;
   final Accounts accounts;
 
-  public Api(Auth auth, MemoryService mem, Providers providers, Chain chain, Accounts accounts) {
+  public Api(Auth auth, MemoryService mem, Providers providers, Accounts accounts) {
     this.auth = auth;
     this.mem = mem;
     this.providers = providers;
-    this.chain = chain;
     this.accounts = accounts;
   }
 
@@ -38,10 +36,6 @@ public class Api {
         "ok",
         "mode",
         Config.env("APP_MODE", "demo"),
-        "registry",
-        chain.registry(),
-        "chainId",
-        Config.chainId(),
         "providers",
         Map.of(
             "openai",
@@ -60,22 +54,6 @@ public class Api {
     r.changeSessionId();
     r.getSession().setAttribute("owner", owner);
     return Map.of("owner", owner);
-  }
-
-  record Nonce(@NotBlank String address) {}
-
-  record Verify(@NotBlank String message, @NotBlank String signature) {}
-
-  @PostMapping("/auth/siwe/nonce")
-  Object nonce(HttpServletRequest r, @Valid @RequestBody Nonce b) {
-    auth.origin(r);
-    return auth.nonce(r, b.address());
-  }
-
-  @PostMapping("/auth/siwe/verify")
-  Object verify(HttpServletRequest r, @Valid @RequestBody Verify b) {
-    auth.origin(r);
-    return Map.of("owner", auth.verify(r, b.message(), b.signature()));
   }
 
   @PostMapping("/auth/logout")
@@ -329,30 +307,6 @@ public class Api {
       chars += size;
     }
     return mem.encode(selected);
-  }
-
-  @PostMapping("/anchors")
-  Object anchor(HttpServletRequest r) {
-    auth.origin(r);
-    return mem.anchor(auth.user(r));
-  }
-
-  record Anchor(String batchId, String txHash) {}
-
-  @PostMapping("/anchors/confirm")
-  Object confirm(HttpServletRequest r, @RequestBody Anchor b) {
-    auth.origin(r);
-    String owner = auth.user(r);
-    var rows =
-        mem.db.queryForList("SELECT * FROM anchors WHERE owner_id=? AND id=?", owner, b.batchId());
-    if (rows.isEmpty()) throw Auth.error(404, "ANCHOR_NOT_FOUND");
-    if (!Config.chainMode()) throw Auth.error(400, "CHAIN_MODE_REQUIRED");
-    chain.verifyAnchorTransaction(
-        owner, b.batchId(), rows.getFirst().get("root").toString(), b.txHash());
-    chain.verifyAnchor(owner, b.batchId(), rows.getFirst().get("root").toString());
-    mem.db.update("UPDATE anchors SET tx_hash=? WHERE id=?", b.txHash(), b.batchId());
-    mem.audit(owner, "owner", "MEMORY_ROOT_ANCHORED", b.batchId(), "ALLOW", b.txHash());
-    return Map.of("ok", true);
   }
 
   @GetMapping("/export")

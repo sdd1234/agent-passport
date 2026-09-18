@@ -18,7 +18,7 @@ public class Crypto {
     if (configured != null && !configured.isBlank()) key = Base64.getDecoder().decode(configured);
     else {
       if (!Config.demo())
-        throw new IllegalStateException("MEMORY_ENCRYPTION_KEY required in live mode");
+        throw new IllegalStateException("MEMORY_ENCRYPTION_KEY required outside demo mode");
       Path p = Path.of(".data/encryption.key");
       Files.createDirectories(p.getParent());
       if (!Files.exists(p)) {

@@ -13,7 +13,7 @@ public class ServiceSecurity extends OncePerRequestFilter {
 
   public ServiceSecurity(Accounts accounts) {
     this.accounts = accounts;
-    if (!java.util.List.of("demo", "service", "live").contains(Config.env("APP_MODE", "demo")))
+    if (!java.util.List.of("demo", "service").contains(Config.env("APP_MODE", "demo")))
       throw new IllegalStateException("Unknown APP_MODE");
     if (Config.env("APP_MODE", "demo").equals("service")
         && Config.env("DEPLOYMENT", "development").equals("production")) {
@@ -34,9 +34,12 @@ public class ServiceSecurity extends OncePerRequestFilter {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Referrer-Policy", "same-origin");
     res.setHeader("Cache-Control", "no-store");
-    if (req.getRequestURI().startsWith("/api/account") && !req.getMethod().equals("GET")) {
+    if ((req.getRequestURI().startsWith("/api/account")
+            || req.getRequestURI().startsWith("/api/pairings"))
+        && !req.getMethod().equals("GET")) {
       try {
-        accounts.throttle(req, "account");
+        accounts.throttle(
+            req, req.getRequestURI().startsWith("/api/pairings") ? "pairing" : "account");
       } catch (org.springframework.web.server.ResponseStatusException e) {
         res.setStatus(429);
         res.setContentType("application/json");

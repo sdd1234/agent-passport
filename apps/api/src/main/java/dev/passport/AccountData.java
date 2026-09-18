@@ -80,6 +80,7 @@ public class AccountData {
             user)
         > 0) throw Auth.error(409, "CANCEL_SUBSCRIPTION_BEFORE_DELETING_ACCOUNT");
     billing.prepareAccountDeletion(user);
+    db.update("DELETE FROM folder_pairings WHERE owner_id=? OR receiver_id=?", user, user);
     db.update(
         "DELETE FROM folder_entry_versions WHERE entry_id IN (SELECT e.id FROM folder_entries e"
             + " JOIN workspace_folders f ON e.folder_id=f.id WHERE f.owner_id=?)",

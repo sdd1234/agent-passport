@@ -190,6 +190,12 @@ public class Folders {
     access(user, id, true, true);
     plans.lock(user);
     if (user.equals(b.userId())) throw Auth.error(400, "OWNER_ROLE_FIXED");
+    if (db.queryForObject(
+            "SELECT COUNT(*) FROM folder_members WHERE folder_id=? AND user_id=?",
+            Integer.class,
+            id,
+            b.userId())
+        == 0) throw Auth.error(403, "PAIRING_REQUIRED");
     if (db.queryForObject("SELECT COUNT(*) FROM users WHERE id=?", Integer.class, b.userId()) != 1)
       throw Auth.error(404, "USER_NOT_FOUND");
     db.update("DELETE FROM folder_members WHERE folder_id=? AND user_id=?", id, b.userId());
@@ -399,82 +405,6 @@ public class Folders {
     if (b.bits() > 0)
       db.update("INSERT INTO folder_agent_grants VALUES(?,?,?,?)", id, b.agentId(), user, b.bits());
     return Map.of("ok", true);
-  }
-
-  record Invite(@NotNull @Pattern(regexp = "viewer|editor") String role) {}
-
-  @GetMapping("/{id}/invites")
-  Object invites(HttpServletRequest r, @PathVariable String id) {
-    access(auth.user(r), id, false, true);
-    return db.queryForList(
-        "SELECT id,role,expires_at FROM folder_invites WHERE folder_id=? AND expires_at>?",
-        id,
-        System.currentTimeMillis());
-  }
-
-  @PostMapping("/{id}/invites")
-  @Transactional
-  Object invite(HttpServletRequest r, @PathVariable String id, @Valid @RequestBody Invite b) {
-    auth.origin(r);
-    String user = auth.user(r);
-    access(user, id, true, true);
-    plans.lock(user);
-    db.update("DELETE FROM folder_invites WHERE expires_at<?", System.currentTimeMillis());
-    if (db.queryForObject(
-            "SELECT COUNT(*) FROM folder_invites WHERE folder_id=?", Integer.class, id)
-        >= 20) throw Auth.error(429, "TOO_MANY_INVITES");
-    String token = Accounts.random(), inviteId = UUID.randomUUID().toString();
-    db.update(
-        "INSERT INTO folder_invites VALUES(?,?,?,?,?,?)",
-        inviteId,
-        id,
-        Crypto.hash(token),
-        b.role(),
-        System.currentTimeMillis() + 86400000,
-        user);
-    return Map.of("id", inviteId, "url", Config.origin() + "/#invite=" + token, "expiresIn", 86400);
-  }
-
-  @DeleteMapping("/{id}/invites/{inviteId}")
-  Object cancelInvite(
-      HttpServletRequest r, @PathVariable String id, @PathVariable String inviteId) {
-    auth.origin(r);
-    access(auth.user(r), id, true, true);
-    db.update("DELETE FROM folder_invites WHERE id=? AND folder_id=?", inviteId, id);
-    return Map.of("ok", true);
-  }
-
-  record Accept(@NotBlank @Size(max = 100) String token) {}
-
-  @PostMapping("/accept-invite")
-  @Transactional
-  Object accept(HttpServletRequest r, @Valid @RequestBody Accept b) {
-    auth.origin(r);
-    String user = auth.user(r);
-    var rows =
-        db.queryForList(
-            "SELECT * FROM folder_invites WHERE token_hash=? AND expires_at>?",
-            Crypto.hash(b.token()),
-            System.currentTimeMillis());
-    if (rows.isEmpty()) throw Auth.error(404, "INVITE_INVALID_OR_EXPIRED");
-    var invite = rows.getFirst();
-    String id = invite.get("folder_id").toString(), owner = invite.get("created_by").toString();
-    plans.lock(owner);
-    if (owner.equals(user)) throw Auth.error(400, "OWNER_ROLE_FIXED");
-    if (db.update(
-            "DELETE FROM folder_invites WHERE id=? AND expires_at>?",
-            invite.get("id"),
-            System.currentTimeMillis())
-        != 1) throw Auth.error(409, "INVITE_ALREADY_USED");
-    var members =
-        db.queryForList(
-            "SELECT role FROM folder_members WHERE folder_id=? AND user_id=?", id, user);
-    String role = invite.get("role").toString();
-    if (!members.isEmpty() && members.getFirst().get("role").equals("editor")) role = "editor";
-    db.update("DELETE FROM folder_members WHERE folder_id=? AND user_id=?", id, user);
-    db.update("INSERT INTO folder_members VALUES(?,?,?)", id, user, role);
-    plans.enforce(owner);
-    return Map.of("folderId", id);
   }
 
   @DeleteMapping("/{id}/binding")

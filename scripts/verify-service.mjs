@@ -116,7 +116,7 @@ try {
         "SELECT COUNT(*) FROM flyway_schema_history WHERE success=true",
       )
     ).rows[0].count,
-    "3",
+    "4",
   );
   const owner = {},
     guest = {};
@@ -149,12 +149,12 @@ try {
     `/folders/${folder.id}/entries/${imported.entryIds[0]}/review`,
     { accept: true, revision: 1 },
   );
-  const invite = await api(owner, `/folders/${folder.id}/invites`, {
+  const pair = await api(owner, "/pairings", {
+    folderId: folder.id,
     role: "editor",
   });
-  await api(guest, "/folders/accept-invite", {
-    token: invite.url.split("#invite=")[1],
-  });
+  await api(guest, "/pairings/join", { code: pair.code });
+  await api(owner, `/pairings/${pair.id}/confirm`, { code: pair.code });
   await api(guest, `/folders/${folder.id}/binding`, {
     localPath: "/team/project",
   });
@@ -348,7 +348,7 @@ try {
           "account signup and isolation",
           "persistent session after API restart",
           "import review",
-          "single-use invitation",
+          "two-party single-use code pairing",
           "MCP folder context and proposal",
           "sharing revocation",
           "export",

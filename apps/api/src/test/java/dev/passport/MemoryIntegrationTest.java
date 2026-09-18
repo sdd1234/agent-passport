@@ -5,17 +5,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
-import org.web3j.crypto.*;
-import org.web3j.utils.Numeric;
 
 @SpringBootTest(
     properties = {
@@ -140,48 +136,6 @@ class MemoryIntegrationTest {
   }
 
   @Test
-  void siweSignatureReplayRejected() throws Exception {
-    var key = Keys.createEcKeyPair();
-    String address = "0x" + Keys.getAddress(key);
-    MockHttpSession session = new MockHttpSession();
-    String payload =
-        mvc.perform(
-                post("/api/auth/siwe/nonce")
-                    .session(session)
-                    .header("X-Passport-Request", "1")
-                    .contentType("application/json")
-                    .content(json.writeValueAsString(Map.of("address", address))))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse()
-            .getContentAsString();
-    String message = json.readTree(payload).get("message").asText();
-    var sig = Sign.signPrefixedMessage(message.getBytes(StandardCharsets.UTF_8), key);
-    byte[] signature = new byte[65];
-    System.arraycopy(sig.getR(), 0, signature, 0, 32);
-    System.arraycopy(sig.getS(), 0, signature, 32, 32);
-    signature[64] = sig.getV()[0];
-    String request =
-        json.writeValueAsString(
-            Map.of("message", message, "signature", Numeric.toHexString(signature)));
-    mvc.perform(
-            post("/api/auth/siwe/verify")
-                .session(session)
-                .header("X-Passport-Request", "1")
-                .contentType("application/json")
-                .content(request))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.owner").value(address));
-    mvc.perform(
-            post("/api/auth/siwe/verify")
-                .session(session)
-                .header("X-Passport-Request", "1")
-                .contentType("application/json")
-                .content(request))
-        .andExpect(status().isUnauthorized());
-  }
-
-  @Test
   void expiredMemoryExcludedAndDeleteRemovesPlaintext() {
     var proposal =
         mem.propose(
@@ -200,14 +154,5 @@ class MemoryIntegrationTest {
         0,
         mem.db.queryForObject(
             "SELECT COUNT(*) FROM proposals WHERE owner_id=?", Integer.class, owner));
-  }
-
-  @Test
-  void anchorDeterministicAndNoRawScope() {
-    var proposal = mem.propose(owner, p("Secret context", "personal"));
-    mem.resolve(owner, proposal.get("id").toString(), true);
-    assertEquals(mem.anchor(owner).get("root"), mem.anchor(owner).get("root"));
-    assertNotEquals(
-        mem.chain.scopeHash(owner, "personal", mem.salt(owner)), Hash.sha3String("personal"));
   }
 }

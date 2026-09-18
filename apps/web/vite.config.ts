@@ -5,9 +5,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: { wallet: ["ethers"], react: ["react", "react-dom"] },
+        manualChunks: { react: ["react", "react-dom"] },
       },
     },
   },
-  server: { port: Number(process.env.WEB_PORT || 5173), proxy: { "/api": process.env.PASSPORT_API_URL || "http://127.0.0.1:8080" } },
+  server: {
+    port: Number(process.env.WEB_PORT || 5173),
+    proxy: { "/api": process.env.PASSPORT_API_URL || "http://127.0.0.1:8080" },
+  },
 });

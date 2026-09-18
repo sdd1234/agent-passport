@@ -92,16 +92,17 @@ class ServiceIntegrationTest {
             .path("entryIds")
             .get(0)
             .asText());
-    var invite = postJson("/api/folders/" + folder + "/invites", Map.of("role", "editor"), owner);
-    String token = invite.path("url").asText().split("#invite=")[1];
-    postJson("/api/folders/accept-invite", Map.of("token", token), guest);
+    var pair = postJson("/api/pairings", Map.of("folderId", folder, "role", "editor"), owner);
+    String code = pair.path("code").asText();
+    postJson("/api/pairings/join", Map.of("code", code), guest);
+    postJson("/api/pairings/" + pair.path("id").asText() + "/confirm", Map.of("code", code), owner);
     mvc.perform(
-            post("/api/folders/accept-invite")
+            post("/api/pairings/join")
                 .session(guest)
                 .header("X-Passport-Request", "1")
                 .contentType("application/json")
-                .content(json.writeValueAsBytes(Map.of("token", token))))
-        .andExpect(status().isNotFound());
+                .content(json.writeValueAsBytes(Map.of("code", code))))
+        .andExpect(status().isConflict());
     var a = memories.register(guestId, "mcp", "Guest Agent");
     String bearer = "Bearer " + a.get("token");
     mvc.perform(

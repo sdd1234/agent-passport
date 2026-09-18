@@ -1,16 +1,11 @@
 package dev.passport;
 
 import jakarta.servlet.http.*;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import org.web3j.crypto.*;
-import org.web3j.utils.Numeric;
 
 @Service
 public class Auth {
@@ -76,62 +71,5 @@ public class Auth {
           owner,
           UUID.randomUUID().toString(),
           System.currentTimeMillis());
-  }
-
-  public Map<String, Object> nonce(HttpServletRequest req, String address) {
-    if (!address.matches("0x[0-9a-fA-F]{40}")) throw error(400, "INVALID_ADDRESS");
-    String n = UUID.randomUUID().toString().replace("-", "");
-    Instant now = Instant.now();
-    String m =
-        URI.create(Config.origin()).getAuthority()
-            + " wants you to sign in with your Ethereum account:\n"
-            + address
-            + "\n\nSign in to Agent Passport.\n\nURI: "
-            + Config.origin()
-            + "\nVersion: 1\nChain ID: "
-            + Config.chainId()
-            + "\nNonce: "
-            + n
-            + "\nIssued At: "
-            + now
-            + "\nExpiration Time: "
-            + now.plusSeconds(300);
-    HttpSession s = req.getSession();
-    s.setAttribute("siwe", m);
-    s.setAttribute("address", address.toLowerCase());
-    s.setAttribute("deadline", System.currentTimeMillis() + 300000);
-    return Map.of("message", m, "nonce", n);
-  }
-
-  public String verify(HttpServletRequest req, String message, String signature) {
-    HttpSession s = req.getSession();
-    String expected = (String) s.getAttribute("siwe");
-    String address = (String) s.getAttribute("address");
-    Long deadline = (Long) s.getAttribute("deadline");
-    s.removeAttribute("siwe");
-    s.removeAttribute("address");
-    s.removeAttribute("deadline");
-    if (expected == null || !expected.equals(message) || deadline < System.currentTimeMillis())
-      throw error(401, "INVALID_OR_EXPIRED_NONCE");
-    try {
-      byte[] sig = Numeric.hexStringToByteArray(signature);
-      if (sig.length != 65) throw new IllegalArgumentException();
-      byte v = sig[64];
-      if (v < 27) v += 27;
-      var data =
-          new Sign.SignatureData(
-              v, Arrays.copyOfRange(sig, 0, 32), Arrays.copyOfRange(sig, 32, 64));
-      String recovered =
-          "0x"
-              + Keys.getAddress(
-                  Sign.signedPrefixedMessageToKey(message.getBytes(StandardCharsets.UTF_8), data));
-      if (!recovered.equalsIgnoreCase(address)) throw new IllegalArgumentException();
-    } catch (Exception e) {
-      throw error(401, "INVALID_SIGNATURE");
-    }
-    ensureUser(address);
-    req.changeSessionId();
-    s.setAttribute("owner", address);
-    return address;
   }
 }

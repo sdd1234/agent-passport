@@ -1,0 +1,19 @@
+{
+  "verifiedAt": "2026-09-18T04:33:23.877Z",
+  "environment": "PC service, persistent PostgreSQL, two isolated Chromium contexts",
+  "checks": [
+    "no wallet login",
+    "GUI signup of both accounts",
+    "cancelled code denied",
+    "receiver identity displayed",
+    "no access before sender confirmation",
+    "wrong sender code rejected",
+    "both parties enter same code",
+    "shared handoff visible with viewer restrictions",
+    "single use",
+    "revoke blocks access"
+  ],
+  "limitations": [
+    "Two browser sessions on one host; separate physical PCs and public network access not tested."
+  ]
+}

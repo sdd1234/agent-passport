@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ImportPanel } from "./ImportPanel";
 import { FolderEntries } from "./FolderEntries";
+import { ReceivePairing, SendPairing } from "./Pairing";
 import { FolderConnections } from "./FolderConnections";
 type Folder = {
   id: string;
@@ -23,19 +24,11 @@ export function Folders({
   const [name, setName] = useState(""),
     [path, setPath] = useState(""),
     [parent, setParent] = useState(""),
-    [user, setUser] = useState(""),
-    [role, setRole] = useState("viewer"),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
     [moveParent, setMoveParent] = useState(""),
-    [inviteUrl, setInviteUrl] = useState(""),
-    [invites, setInvites] = useState<any[]>([]),
     [entryKey, setEntryKey] = useState(0);
-  const [inviteToken, setInviteToken] = useState(
-    () =>
-      new URLSearchParams(window.location.hash.slice(1)).get("invite") || "",
-  );
   const refresh = async () => setFolders(await api("/folders"));
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -57,14 +50,11 @@ export function Folders({
   async function select(id: string) {
     setSelected(null);
     setMembers([]);
-    setInvites([]);
-    setInviteUrl("");
     const f = await api(`/folders/${id}`);
     setSelected(f);
     setMoveParent(f.parent_id || "");
     if (f.role === "owner") {
       setMembers(await api(`/folders/${id}/members`));
-      setInvites(await api(`/folders/${id}/invites`));
     }
   }
   function folderPath(folder: Folder) {
@@ -88,33 +78,13 @@ export function Folders({
       </p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
-      <details open={!!inviteToken}>
-        <summary>초대받은 폴더 연결</summary>
-        <label>
-          초대 링크 또는 코드
-          <input
-            value={inviteToken}
-            onChange={(e) => setInviteToken(e.target.value)}
-          />
-        </label>
-        <button
-          disabled={busy || !inviteToken}
-          onClick={() =>
-            void run(async () => {
-              const token = inviteToken.includes("#invite=")
-                ? inviteToken.split("#invite=")[1]
-                : inviteToken;
-              const result = await api("/folders/accept-invite", { token });
-              setInviteToken("");
-              window.history.replaceState(null, "", window.location.pathname);
-              await refresh();
-              await select(result.folderId);
-            })
-          }
-        >
-          초대 수락
-        </button>
-      </details>
+      <ReceivePairing
+        api={api}
+        onConnected={async (id) => {
+          await refresh();
+          await select(id);
+        }}
+      />
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -316,93 +286,14 @@ export function Folders({
                 >
                   폴더 삭제
                 </button>
-                <h3>폴더 공유</h3>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      const invite = await api(
-                        `/folders/${selected.id}/invites`,
-                        { role },
-                      );
-                      setInviteUrl(invite.url);
-                      setInvites(await api(`/folders/${selected.id}/invites`));
-                    })
+                <SendPairing
+                  key={selected.id}
+                  api={api}
+                  folderId={selected.id}
+                  onConnected={async () =>
+                    setMembers(await api(`/folders/${selected.id}/members`))
                   }
-                >
-                  현재 권한으로 초대 링크 만들기
-                </button>
-                {inviteUrl && (
-                  <>
-                    <p>
-                      24시간 동안 한 번 사용할 수 있는 링크입니다. 받을 사람에게
-                      직접 전달하세요.
-                    </p>
-                    <input aria-label="초대 링크" readOnly value={inviteUrl} />
-                  </>
-                )}
-                {invites.map((invite) => (
-                  <p key={invite.id}>
-                    {invite.role} ·{" "}
-                    {new Date(invite.expires_at).toLocaleString()}까지{" "}
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        void run(async () => {
-                          await api(
-                            `/folders/${selected.id}/invites/${invite.id}`,
-                            undefined,
-                            "DELETE",
-                          );
-                          setInvites(
-                            await api(`/folders/${selected.id}/invites`),
-                          );
-                        })
-                      }
-                    >
-                      초대 취소
-                    </button>
-                  </p>
-                ))}
-                <p>
-                  이미 가입한 사용자의 계정 ID로 공유합니다. 데모 계정은 모든
-                  방문자가 같은 계정을 사용하므로 개인 간 공유 검증에는 개별
-                  로그인이 필요합니다.
-                </p>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void run(async () => {
-                      await api(`/folders/${selected.id}/members`, {
-                        userId: user,
-                        role,
-                      });
-                      setMembers(await api(`/folders/${selected.id}/members`));
-                      setUser("");
-                    });
-                  }}
-                >
-                  <label>
-                    사용자 계정 ID
-                    <input
-                      required
-                      maxLength={80}
-                      value={user}
-                      onChange={(e) => setUser(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    권한
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                    >
-                      <option value="viewer">읽기</option>
-                      <option value="editor">편집</option>
-                    </select>
-                  </label>
-                  <button disabled={busy}>공유 적용</button>
-                </form>
+                />
                 {members.map((m) => (
                   <p key={m.user_id}>
                     {m.user_id} · {m.role}{" "}

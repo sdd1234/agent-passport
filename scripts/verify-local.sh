@@ -9,7 +9,7 @@ export PASSPORT_API_URL="http://127.0.0.1:$PORT"
 export PASSPORT_WEB_URL="http://localhost:$WEB_PORT"
 export APP_ORIGIN="$PASSPORT_WEB_URL"
 export APP_MODE=demo SEARCH_MODE=lexical COOKIE_SECURE=false
-export OPENAI_API_KEY= ANTHROPIC_API_KEY= REGISTRY_ADDRESS=
+export OPENAI_API_KEY= ANTHROPIC_API_KEY=
 node --input-type=module - <<'JS'
 import net from 'node:net';
 for (const port of [process.env.PORT, process.env.WEB_PORT]) {
@@ -35,7 +35,6 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 npm run build
 mvn -q -f apps/api/pom.xml package
-npm run test:contracts
 java -jar apps/api/target/api-0.1.0.jar > "$PASSPORT_VERIFY_DIR/api.log" 2>&1 &
 PASSPORT_API_PID=$!
 node node_modules/vite/bin/vite.js apps/web --config apps/web/vite.config.ts --host 127.0.0.1 --strictPort > "$PASSPORT_VERIFY_DIR/web.log" 2>&1 &
@@ -48,4 +47,4 @@ done
 curl -fsS "$PASSPORT_API_URL/api/health" >/dev/null
 npm run test:e2e
 npm run test:mcp
-printf 'PASS: build, Java, contracts, browser, MCP. Isolated logs/DB: %s\n' "$PASSPORT_VERIFY_DIR"
+printf 'PASS: build, Java, browser, MCP. Isolated logs/DB: %s\n' "$PASSPORT_VERIFY_DIR"

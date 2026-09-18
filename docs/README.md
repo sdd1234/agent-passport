@@ -4,7 +4,7 @@
 - [서비스 배포와 백업·결제 설정](deployment.md)
 - [서비스 구현 상태](service-roadmap.md)
 
-이 문서는 `Agent_Passport_BlockAI26_기획서.pdf` 23쪽과 구현 후 대화에서 제기된 질문을 함께 정리합니다. **현재 적용된 코드, 검증 범위, 앞으로 구현할 설계를 구분합니다.** 작성·점검 기준: 2026-09-14.
+이 문서는 `Agent_Passport_BlockAI26_기획서.pdf` 23쪽과 구현 후 대화에서 제기된 질문을 함께 정리합니다. **현재 적용된 코드, 검증 범위, 앞으로 구현할 설계를 구분합니다.** 현재 제품 방향은 2026-09-18 기준 블록체인 제외·일회용 코드 공유입니다. 과거 기획서와 검증 기록의 EVM 내용은 현재 구현 또는 향후 계획이 아닙니다.
 
 **[한 파일로 읽는 통합 문서](전체-설계-사용가이드.md)**
 
@@ -20,7 +20,6 @@
 | --- | --- |
 | [데이터 파싱·기억 생명주기](memory-lifecycle.md) | 어떤 데이터를 받는가, 무엇을 기억하는가, 출처·중복·충돌·삭제는 어떻게 처리하는가 |
 | [RAG·벡터화 설계](rag-design.md) | 무엇을 한 벡터로 만드는가, 모델·검색·재색인·평가는 어떻게 하는가 |
-| [블록체인 사용 설계](blockchain-design.md) | 지금 체인을 쓰는가, 계약에 무엇이 기록되는가, 어떤 보장을 하는가 |
 | [긴 세션 처리 설계](session-design.md) | 긴 대화·컨텍스트 압축·체크포인트·새 세션 복원은 어떻게 하는가 |
 | [구현 순서와 완료 기준](roadmap.md) | 빠진 기능을 어떤 순서로 구현하고 무엇으로 검증하는가 |
 
@@ -31,7 +30,7 @@
 - [기획서 요구사항 대응표](requirements.md)
 - [테스트 실행 안내](testing.md)
 - [일반 검증 결과](validation-results.json)
-- [PostgreSQL·pgvector·로컬 EVM 결과](integration-results.json)
+- [변경 전 PostgreSQL·pgvector·EVM 역사 기록](integration-results.json)
 - [실제 Codex·Claude 도구 호출 결과](real-client-results.json)
 - [공식 참고 문서](references.md)
 - [기획서 전체 추출문](기획서-전체.txt)

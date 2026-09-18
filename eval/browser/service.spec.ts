@@ -94,17 +94,21 @@ test("two accounts import, approve, share and revoke project context", async ({
       fullPage: true,
     });
     await owner
-      .getByRole("button", {
-        name: "현재 권한으로 초대 링크 만들기",
-        exact: true,
-      })
+      .getByRole("button", { name: "공유 코드 발급", exact: true })
       .click();
-    const invite = await owner
-      .getByLabel("초대 링크", { exact: true })
+    const code = await owner
+      .getByLabel("발급된 공유 코드", { exact: true })
       .inputValue();
-    await guest.getByText("초대받은 폴더 연결", { exact: true }).click();
-    await guest.getByLabel("초대 링크 또는 코드", { exact: true }).fill(invite);
-    await guest.getByRole("button", { name: "초대 수락", exact: true }).click();
+    await guest.getByText("일회용 코드로 공유받기", { exact: true }).click();
+    await guest.getByLabel("받은 공유 코드", { exact: true }).fill(code);
+    await guest.getByRole("button", { name: "연결 요청", exact: true }).click();
+    await expect(
+      guest.getByText("보내는 PC에서 상대 계정과 코드를 확인하면 연결됩니다."),
+    ).toBeVisible();
+    await owner.getByLabel("보내는 PC 코드 확인", { exact: true }).fill(code);
+    await owner
+      .getByRole("button", { name: "상대 확인 후 공유 연결", exact: true })
+      .click();
     await expect(
       guest.getByLabel("인수인계 문서", { exact: true }),
     ).toHaveValue("구현 완료: 계정과 폴더\n다음: 디자인 검토");

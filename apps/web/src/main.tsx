@@ -31,7 +31,6 @@ import {
   History,
   LoaderCircle,
 } from "lucide-react";
-import { BrowserProvider, Contract } from "ethers";
 import "./style.css";
 import { Folders } from "./Folders";
 import { AccountLogin, BillingPanel, AccountSettings } from "./Account";
@@ -77,11 +76,6 @@ const tabs = [
   { id: "audit", label: "감사 로그", en: "Audit trail", icon: Activity },
   { id: "billing", label: "요금제 · 사용량", en: "Plan & usage", icon: Wallet },
 ];
-const abi = [
-  "function grantAccess(bytes32,bytes32,uint8,uint64)",
-  "function revokeAccess(bytes32,bytes32)",
-  "function anchorMemoryRoot(bytes32,bytes32)",
-];
 function App() {
   const [health, setHealth] = useState<Row>({ mode: "demo", providers: {} }),
     [owner, setOwner] = useState(""),
@@ -101,8 +95,7 @@ function App() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [ready, setReady] = useState(false),
-    [token, setToken] = useState(""),
-    [anchor, setAnchor] = useState<Row | null>(null);
+    [token, setToken] = useState("");
   const notify = (s: string) => {
     setToast(s);
     setTimeout(() => setToast(""), 4500);
@@ -186,55 +179,13 @@ function App() {
     await api("/demo/seed", {});
     await refresh();
   }
-  async function wallet() {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum)
-      throw new Error(
-        "MetaMask 등 Ethereum 지갑 확장 프로그램을 설치해 주세요.",
-      );
-    const provider = new BrowserProvider(ethereum);
-    const signer = await provider.getSigner();
-    const network = await provider.getNetwork();
-    if (Number(network.chainId) !== health.chainId)
-      throw new Error(
-        `지갑 네트워크를 Chain ID ${health.chainId}로 변경해 주세요.`,
-      );
-    const { message } = await api("/auth/siwe/nonce", {
-      address: await signer.getAddress(),
-    });
-    const signature = await signer.signMessage(message);
-    const me = await api("/auth/siwe/verify", { message, signature });
-    setOwner(me.owner);
-    await refresh();
-    notify("지갑 서명으로 로그인했습니다.");
-  }
-  async function contract() {
-    const p = new BrowserProvider((window as any).ethereum);
-    const signer = await p.getSigner();
-    if ((await signer.getAddress()).toLowerCase() !== owner.toLowerCase())
-      throw new Error("로그인한 지갑과 현재 지갑이 다릅니다.");
-    if (Number((await p.getNetwork()).chainId) !== health.chainId)
-      throw new Error("지갑 네트워크를 확인해 주세요.");
-    return new Contract(health.registry, abi, signer);
-  }
   async function grant(p: Row, bits: number, ttl = 0) {
-    let txHash;
     const expiresAt = ttl ? Math.floor(Date.now() / 1000) + ttl : 0;
-    if (health.mode === "live") {
-      const c = await contract();
-      const tx = bits
-        ? await c.grantAccess(p.agentHash, p.scopeHash, bits, expiresAt)
-        : await c.revokeAccess(p.agentHash, p.scopeHash);
-      notify("지갑 트랜잭션 확인을 기다리는 중입니다.");
-      await tx.wait();
-      txHash = tx.hash;
-    }
     await api("/permissions/" + (bits ? "grant" : "revoke"), {
       agentId: p.agentId,
       scope: p.scope,
       bits,
       expiresAt,
-      txHash,
     });
     await refresh();
     notify(
@@ -334,9 +285,9 @@ function App() {
             <ShieldCheck size={22} />
             <strong>기억의 주인은 당신입니다.</strong>
             <p>
-              기억은 오프체인에, 동의는
+              기억과 공유 권한은
               <br />
-              당신의 지갑에 남습니다.
+              서버에서 안전하게 관리합니다.
             </p>
             <button onClick={() => setModal("about")}>
               작동 방식 알아보기 <ArrowUpRight size={14} />
@@ -344,7 +295,7 @@ function App() {
           </div>
           <button
             className="profile"
-            aria-label={owner ? "로그아웃" : "지갑 연결"}
+            aria-label={owner ? "로그아웃" : "계정 로그인"}
             onClick={() =>
               owner
                 ? run(async () => {
@@ -356,7 +307,11 @@ function App() {
                     setConflicts([]);
                     setAudit([]);
                   })
-                : run(wallet)
+                : document
+                    .querySelector<HTMLInputElement>(
+                      'input[autocomplete="username"]',
+                    )
+                    ?.focus()
             }
           >
             <span className="avatar">{owner ? "J" : <Wallet size={17} />}</span>
@@ -365,7 +320,7 @@ function App() {
                 ? "Demo workspace"
                 : owner
                   ? owner.slice(0, 7) + "…" + owner.slice(-4)
-                  : "지갑 연결"}
+                  : "계정 로그인"}
               <small>
                 {owner ? "클릭하여 로그아웃" : "나의 Passport 시작하기"}
               </small>
@@ -386,7 +341,7 @@ function App() {
                 ? "Local demo · 체인 미연결"
                 : health.mode === "service"
                   ? "프로젝트 공유 서비스"
-                  : "EVM · " + health.chainId}
+                  : "프로젝트 공유 서비스"}
             </span>
             <button
               className="icon-btn"
@@ -507,14 +462,6 @@ function App() {
                       데모 시작하기 <ArrowRight size={17} />
                     </button>
                   )}
-                  <button
-                    className="btn"
-                    disabled={busy}
-                    onClick={() => run(wallet)}
-                  >
-                    <Wallet size={17} />
-                    지갑으로 로그인
-                  </button>
                 </div>
                 <small>
                   데모는 예시 데이터와 시뮬레이션 응답을 사용합니다.
@@ -734,17 +681,6 @@ function App() {
                       <LockKeyhole size={13} /> Your memory belongs to you.
                       Always.
                     </span>
-                    <button
-                      onClick={() =>
-                        run(async () => {
-                          const a = await api("/anchors", {});
-                          setAnchor(a);
-                          setModal("anchor");
-                        })
-                      }
-                    >
-                      무결성 증명 만들기 <ArrowUpRight size={13} />
-                    </button>
                   </footer>
                 </>
               )}
@@ -1185,46 +1121,6 @@ function App() {
                 </button>
               </>
             )}
-            {modal === "anchor" && anchor && (
-              <>
-                <span className="eyebrow">INTEGRITY PROOF</span>
-                <h2>기억의 무결성 증명</h2>
-                <p>
-                  {anchor.leafCount}개 버전을 Merkle root 하나로 묶었습니다.
-                </p>
-                <code className="token">{anchor.root}</code>
-                <p>
-                  {health.mode !== "live"
-                    ? "로컬에서 생성한 증명입니다. 블록체인에 기록되지 않았습니다."
-                    : "지갑으로 서명하면 원문 없이 root만 계약에 기록합니다."}
-                </p>
-                {health.mode === "live" && (
-                  <button
-                    className="btn primary"
-                    disabled={busy}
-                    onClick={() =>
-                      run(async () => {
-                        const c = await contract();
-                        const tx = await c.anchorMemoryRoot(
-                          anchor.batchId,
-                          anchor.root,
-                        );
-                        await tx.wait();
-                        await api("/anchors/confirm", {
-                          batchId: anchor.batchId,
-                          txHash: tx.hash,
-                        });
-                        await refresh();
-                        notify("온체인 무결성 증명이 확인되었습니다.");
-                        setModal("");
-                      })
-                    }
-                  >
-                    지갑으로 앵커 기록
-                  </button>
-                )}
-              </>
-            )}
             {modal === "about" && (
               <>
                 <span className="eyebrow">HOW IT WORKS</span>
@@ -1243,17 +1139,15 @@ function App() {
                     검색하고 출처와 함께 활용합니다.
                   </p>
                   <p>
-                    <b>04 · 소유권 지키기</b>원문은 AES-GCM 암호화 저장, 실제
-                    체인 모드의 권한은 사용자 지갑으로 서명합니다.
+                    <b>04 · 소유권 지키기</b>원문은 AES-GCM으로 암호화하고,
+                    공유는 양쪽의 일회용 코드 확인 후 연결합니다.
                   </p>
                 </div>
                 <p className="mode-note">
                   현재{" "}
                   {health.mode === "demo"
                     ? "데모 모드: H2 영속 DB, 로컬 권한, 규칙 기반 추출과 시뮬레이션 응답."
-                    : health.mode === "service"
-                      ? "서비스 모드: 개별 계정과 서버 권한으로 프로젝트를 공유합니다."
-                      : "실제 연동 모드: 지갑과 EVM 계약이 필요합니다."}{" "}
+                    : "서비스 모드: 개별 계정과 일회용 코드로 프로젝트를 공유합니다."}{" "}
                   Playground의 실제 API 모드는 서버에 설정된 공급자 키를
                   사용합니다.
                 </p>
@@ -1288,7 +1182,7 @@ function PermissionView({
           <p>
             {mode === "demo"
               ? "데모 권한도 모든 검색·저장 API에서 검사합니다."
-              : "변경 시 지갑 서명을 요청하고, 확인된 계약 상태를 반영합니다."}{" "}
+              : "변경한 권한을 서버에서 검사하고 즉시 적용합니다."}{" "}
             권한 철회는 다음 검색부터 적용됩니다.
           </p>
         </div>
