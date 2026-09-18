@@ -1,3 +1,4 @@
+import { verifyRealCollaboration } from "./real-collaboration-clients.mjs";
 import { verifyRealFolders } from "./real-folder-clients.mjs";
 import EmbeddedPostgres from "embedded-postgres";
 import { spawn } from "node:child_process";
@@ -116,7 +117,7 @@ try {
         "SELECT COUNT(*) FROM flyway_schema_history WHERE success=true",
       )
     ).rows[0].count,
-    "4",
+    "5",
   );
   const owner = {},
     guest = {};
@@ -174,6 +175,70 @@ try {
       },
     }),
   );
+  const task = await api(owner, `/folders/${folder.id}/tasks`, {
+    title: "Collaborative API",
+    description: "Synthetic integration",
+    workScope: "api",
+  });
+  let taskReply = await client.callTool({
+    name: "claim_folder_task",
+    arguments: { folder_id: folder.id, task_id: task.id, revision: 1 },
+  });
+  assert.ok(!taskReply.isError);
+  taskReply = await client.callTool({
+    name: "update_folder_task",
+    arguments: {
+      folder_id: folder.id,
+      task_id: task.id,
+      revision: 2,
+      status: "done",
+      progress: "PostgreSQL collaboration stored",
+    },
+  });
+  assert.ok(!taskReply.isError);
+  if (process.env.PASSPORT_VERIFY_REAL_COLLABORATION === "true") {
+    const collaborator = await api(owner, "/agents", {
+      provider: "mcp",
+      name: "Codex collaboration test",
+    });
+    await api(owner, `/folders/${folder.id}/agent-grants`, {
+      agentId: collaborator.id,
+      bits: 3,
+    });
+    const web = await api(owner, `/folders/${folder.id}/tasks`, {
+      title: "Web",
+      description: "Synthetic",
+      workScope: "web",
+    });
+    const backend = await api(owner, `/folders/${folder.id}/tasks`, {
+      title: "Backend",
+      description: "Synthetic",
+      workScope: "backend",
+    });
+    await verifyRealCollaboration({
+      base,
+      folderId: folder.id,
+      dir,
+      participants: [
+        { name: "codex", token: collaborator.token, taskId: web.id },
+        { name: "claude", token: agent.token, taskId: backend.id },
+      ],
+    });
+    const tasks = await api(owner, `/folders/${folder.id}/tasks`);
+    assert.equal(
+      tasks.find((t) => t.id === web.id).progress,
+      "codex collaboration verified",
+    );
+    assert.equal(
+      tasks.find((t) => t.id === backend.id).progress,
+      "claude collaboration verified",
+    );
+    assert.ok(
+      tasks
+        .filter((t) => [web.id, backend.id].includes(t.id))
+        .every((t) => t.status === "done"),
+    );
+  }
   let result = await client.callTool({
     name: "get_folder_context",
     arguments: {},
@@ -207,6 +272,13 @@ try {
   // Restart proves both account session persistence and database-backed content.
   await stop();
   await start();
+  assert.equal(
+    (await api(owner, `/folders/${folder.id}/tasks`)).find(
+      (t) => t.id === task.id,
+    ).progress,
+    "PostgreSQL collaboration stored",
+  );
+
   assert.equal((await api(guest, "/me")).owner, other.owner);
   assert.equal((await api(guest, `/folders/${folder.id}/entries`)).length, 2);
   await api(
@@ -328,6 +400,11 @@ try {
       .count,
     "0",
   );
+  for (const table of ["folder_tasks", "folder_task_events"])
+    assert.equal(
+      (await sql.query(`SELECT COUNT(*) FROM ${table}`)).rows[0].count,
+      "0",
+    );
   console.log(
     "PASS: PostgreSQL legacy migration, service signup, persistent sessions/restart, direct import, sharing, actual MCP folder read/proposal/revoke, export and account deletion.",
   );
@@ -340,6 +417,7 @@ try {
         mode: "service",
         checks: [
           "legacy-schema migration",
+          "collaboration task persistence",
           "account signup and isolation",
           "persistent session after API restart",
           "owner import available without review",
@@ -352,11 +430,14 @@ try {
         backupRestore: !!(
           process.env.PG_DUMP_BIN && process.env.PG_RESTORE_BIN
         ),
+        realCollaboration:
+          process.env.PASSPORT_VERIFY_REAL_COLLABORATION === "true",
         realFolderClients: process.env.PASSPORT_VERIFY_REAL_CLIENTS === "true",
         externalUnverified: [
           "public HTTPS deployment",
           "live Stripe checkout and webhook delivery",
-          ...(process.env.PASSPORT_VERIFY_REAL_CLIENTS === "true"
+          ...(process.env.PASSPORT_VERIFY_REAL_CLIENTS === "true" ||
+          process.env.PASSPORT_VERIFY_REAL_COLLABORATION === "true"
             ? []
             : ["real Codex/Claude invoking new folder tools"]),
         ],

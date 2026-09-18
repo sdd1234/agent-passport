@@ -2524,3 +2524,48 @@ td.mono {
 .provider-codex .folder-provider-mark {
   color: #4a555b;
 }
+.collaboration-board {
+  margin: 25px 0;
+  padding: 18px 22px;
+  border: 1px solid #dfe7e3;
+  border-radius: 14px;
+  background: #f4f8f6;
+}
+.collaboration-board .timeline-toolbar {
+  margin: 0 0 18px;
+}
+.collaboration-board .timeline-toolbar > span {
+  font-size: 12px;
+  color: #607e70;
+}
+.collaboration-task summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.collaboration-task summary small {
+  margin-left: auto;
+}
+.task-progress,
+.collaboration-task > p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.task-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.timeline-badge.active {
+  background: #e0efe8;
+  color: #286349;
+}
+.timeline-badge.blocked {
+  background: #fff0df;
+  color: #906130;
+}
+.timeline-badge.done {
+  background: #e7e9f3;
+  color: #585f7b;
+}

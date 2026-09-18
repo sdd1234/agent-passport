@@ -342,6 +342,10 @@ public class Entries {
         1,
         "folder",
         folders.readable(f),
+        "tasks",
+        Collaboration.readTasks(db, crypto, id),
+        "taskEvents",
+        Collaboration.exportEvents(db, crypto, id),
         "entries",
         db
             .queryForList("SELECT * FROM folder_entries WHERE folder_id=? ORDER BY updated_at", id)

@@ -81,6 +81,25 @@ public class Plans {
                 "SELECT COALESCE(SUM(OCTET_LENGTH(payload)),0) FROM proposals WHERE owner_id=?",
                 Long.class,
                 owner);
+    bytes +=
+        db.queryForObject(
+                "SELECT COALESCE(SUM(OCTET_LENGTH(t.description)+OCTET_LENGTH(t.progress)),0) FROM"
+                    + " folder_tasks t JOIN workspace_folders f ON t.folder_id=f.id WHERE"
+                    + " f.owner_id=?",
+                Long.class,
+                owner)
+            + db.queryForObject(
+                "SELECT COALESCE(SUM(OCTET_LENGTH(ev.progress)),0) FROM folder_task_events ev JOIN"
+                    + " folder_tasks t ON ev.task_id=t.id JOIN workspace_folders f ON"
+                    + " t.folder_id=f.id WHERE f.owner_id=?",
+                Long.class,
+                owner);
+    entries +=
+        db.queryForObject(
+            "SELECT COUNT(*) FROM folder_tasks t JOIN workspace_folders f ON t.folder_id=f.id WHERE"
+                + " f.owner_id=?",
+            Long.class,
+            owner);
     entries +=
         db.queryForObject("SELECT COUNT(*) FROM memories WHERE owner_id=?", Long.class, owner);
     long shares =

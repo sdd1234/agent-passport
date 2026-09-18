@@ -3,6 +3,9 @@ import path from "node:path";
 import { createInterface } from "node:readline/promises";
 const root = path.resolve(import.meta.dirname, ".."),
   rl = createInterface({ input: process.stdin, output: process.stdout });
+const provider = process.argv[2] === "--provider" ? process.argv[3] : "";
+if (provider && !["codex", "claude"].includes(provider))
+  throw new Error("provider must be codex or claude");
 try {
   const apiUrl = (await rl.question("Passport server URL (https://...): "))
     .trim()
@@ -23,7 +26,10 @@ try {
       "Set PASSPORT_AGENT_TOKEN using: read -rs PASSPORT_AGENT_TOKEN; export PASSPORT_AGENT_TOKEN",
     );
   await fs.mkdir(path.join(root, ".data"), { recursive: true });
-  const file = path.join(root, ".data/service-client.json");
+  const file = path.join(
+    root,
+    `.data/service-client${provider ? "-" + provider : ""}.json`,
+  );
   await fs.writeFile(file, JSON.stringify({ apiUrl, token }), { mode: 0o600 });
   await fs.chmod(file, 0o600);
   console.log(

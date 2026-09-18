@@ -9,7 +9,7 @@ if (!["codex", "claude"].includes(name))
 const server = {
   command: process.execPath,
   args: [path.join(root, "scripts/service-mcp.mjs")],
-  env: { PASSPORT_PROJECT_CWD: process.cwd() },
+  env: { PASSPORT_PROJECT_CWD: process.cwd(), PASSPORT_CLIENT_PROVIDER: name },
 };
 const args =
   name === "codex"
@@ -19,7 +19,7 @@ const args =
         "-c",
         `mcp_servers.agent-passport.args=${JSON.stringify(server.args)}`,
         "-c",
-        'mcp_servers.agent-passport.env_vars=["PASSPORT_PROJECT_CWD"]',
+        'mcp_servers.agent-passport.env_vars=["PASSPORT_PROJECT_CWD","PASSPORT_CLIENT_PROVIDER"]',
         "-c",
         "mcp_servers.agent-passport.required=true",
       ]
@@ -29,7 +29,11 @@ const args =
       ];
 const child = spawn(name, [...args, ...process.argv.slice(3)], {
   cwd: process.cwd(),
-  env: { ...process.env, PASSPORT_PROJECT_CWD: process.cwd() },
+  env: {
+    ...process.env,
+    PASSPORT_PROJECT_CWD: process.cwd(),
+    PASSPORT_CLIENT_PROVIDER: name,
+  },
   stdio: "inherit",
 });
 for (const signal of ["SIGTERM", "SIGINT"])

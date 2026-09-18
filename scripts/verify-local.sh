@@ -34,7 +34,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 npm run build
-node --test scripts/test-organizer.mjs scripts/test-overview.mjs scripts/test-conversations.mjs scripts/test-timeline.mjs
+node --test scripts/test-organizer.mjs scripts/test-overview.mjs scripts/test-conversations.mjs scripts/test-timeline.mjs scripts/test-client-connection.mjs
 mvn -q -f apps/api/pom.xml package
 java -jar apps/api/target/api-0.1.0.jar > "$PASSPORT_VERIFY_DIR/api.log" 2>&1 &
 PASSPORT_API_PID=$!

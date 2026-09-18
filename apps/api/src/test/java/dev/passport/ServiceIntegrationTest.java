@@ -75,6 +75,177 @@ class ServiceIntegrationTest {
         key);
   }
 
+  String collaborationAgent(String name) throws Exception {
+    var a = postJson("/api/agents", Map.of("name", name, "provider", "mcp"), owner);
+    postJson(
+        "/api/folders/" + folder + "/agent-grants",
+        Map.of("agentId", a.path("id").asText(), "bits", 3),
+        owner);
+    return a.path("token").asText();
+  }
+
+  String task(String scope) throws Exception {
+    return postJson(
+            "/api/folders/" + folder + "/tasks",
+            Map.of("title", "Task " + scope, "description", "Shared test", "workScope", scope),
+            owner)
+        .path("id")
+        .asText();
+  }
+
+  ResultActions taskChange(String id, String token, Object body) throws Exception {
+    return mvc.perform(
+        patch("/api/folders/" + folder + "/tasks/" + id)
+            .header("Authorization", "Bearer " + token)
+            .contentType("application/json")
+            .content(json.writeValueAsBytes(body)));
+  }
+
+  @Test
+  void agentsCollaborateAndCannotOverwriteEachOthersWork() throws Exception {
+    String claude = collaborationAgent("Claude"), codex = collaborationAgent("Codex");
+    String web = task("apps/./web/"), api = task("apps/api"), overlap = task("apps/web/src");
+    taskChange(web, claude, Map.of("action", "claim", "revision", 1)).andExpect(status().isOk());
+    taskChange(api, codex, Map.of("action", "claim", "revision", 1)).andExpect(status().isOk());
+    taskChange(overlap, codex, Map.of("action", "claim", "revision", 1))
+        .andExpect(status().isConflict());
+    taskChange(
+            web,
+            codex,
+            Map.of(
+                "action",
+                "update",
+                "revision",
+                2,
+                "status",
+                "done",
+                "progress",
+                "foreign overwrite"))
+        .andExpect(status().isForbidden());
+    taskChange(
+            web,
+            claude,
+            Map.of("action", "update", "revision", 1, "status", "active", "progress", "stale"))
+        .andExpect(status().isConflict());
+    taskChange(
+            web,
+            claude,
+            Map.of(
+                "action",
+                "update",
+                "revision",
+                2,
+                "status",
+                "active",
+                "progress",
+                "UI ready, API required"))
+        .andExpect(status().isOk());
+    taskChange(
+            web,
+            claude,
+            Map.of(
+                "action",
+                "update",
+                "revision",
+                3,
+                "status",
+                "done",
+                "progress",
+                "UI tests passed; integrate API"))
+        .andExpect(status().isOk());
+    var response =
+        mvc.perform(
+                get("/api/folders/" + folder + "/tasks").header("Authorization", "Bearer " + codex))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertTrue(response.contains("UI tests passed; integrate API"));
+    var history =
+        mvc.perform(
+                get("/api/folders/" + folder + "/tasks/" + web + "/events")
+                    .header("Authorization", "Bearer " + codex))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertTrue(history.contains("UI ready, API required"));
+    assertFalse(
+        db.queryForObject("SELECT progress FROM folder_tasks WHERE id=?", String.class, web)
+            .contains("UI tests"));
+    taskChange(overlap, codex, Map.of("action", "claim", "revision", 1)).andExpect(status().isOk());
+    db.update("DELETE FROM folder_agent_grants WHERE folder_id=?", folder);
+    mvc.perform(get("/api/folders/" + folder + "/tasks").header("Authorization", "Bearer " + codex))
+        .andExpect(status().isForbidden());
+    taskChange(
+            api,
+            codex,
+            Map.of("action", "update", "revision", 2, "status", "done", "progress", "denied"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void simultaneousClaimsHaveOneWinnerAndExpiredClaimsCannotWrite() throws Exception {
+    String a = collaborationAgent("Claude"), b = collaborationAgent("Codex"), id = task("src");
+    var gate = new java.util.concurrent.CountDownLatch(1);
+    var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+    try {
+      var requests = new ArrayList<java.util.concurrent.Future<Integer>>();
+      for (String token : List.of(a, b))
+        requests.add(
+            pool.submit(
+                () -> {
+                  gate.await();
+                  return taskChange(id, token, Map.of("action", "claim", "revision", 1))
+                      .andReturn()
+                      .getResponse()
+                      .getStatus();
+                }));
+      gate.countDown();
+      var codes = new ArrayList<Integer>();
+      for (var req : requests) codes.add(req.get(10, java.util.concurrent.TimeUnit.SECONDS));
+      Collections.sort(codes);
+      assertEquals(List.of(200, 409), codes);
+      db.update("UPDATE folder_tasks SET lease_until=0 WHERE id=?", id);
+      for (String token : List.of(a, b))
+        assertTrue(
+            taskChange(
+                        id,
+                        token,
+                        Map.of(
+                            "action",
+                            "update",
+                            "revision",
+                            2,
+                            "status",
+                            "active",
+                            "progress",
+                            "expired"))
+                    .andReturn()
+                    .getResponse()
+                    .getStatus()
+                >= 400);
+      taskChange(id, b, Map.of("action", "claim", "revision", 2)).andExpect(status().isOk());
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  @Test
+  void readersCannotCreateTasksAndTaskHistoryIsFolderScoped() throws Exception {
+    String token = collaborationAgent("Reader"), id = task("");
+    db.update("UPDATE folder_agent_grants SET bits=1 WHERE folder_id=?", folder);
+    taskChange(id, token, Map.of("action", "claim", "revision", 1))
+        .andExpect(status().isForbidden());
+    db.update("UPDATE folder_agent_grants SET bits=2 WHERE folder_id=?", folder);
+    taskChange(id, token, Map.of("action", "claim", "revision", 1))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/folders/" + folder + "/tasks").session(guest))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/folders/" + folder + "/tasks/" + id + "/events").session(guest))
+        .andExpect(status().isForbidden());
+  }
+
   @Test
   void folderProviderColorsUseVisibleSourcesWithoutExposingPaths() throws Exception {
     var claude = new HashMap<String, Object>(item("claude-source"));

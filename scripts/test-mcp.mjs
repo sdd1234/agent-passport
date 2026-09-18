@@ -43,7 +43,7 @@ try {
       },
     }),
   );
-  assert.equal((await client.listTools()).tools.length, 11);
+  assert.equal((await client.listTools()).tools.length, 17);
   const denied = await client.callTool({
     name: "search_memory",
     arguments: { query: "MCP", scope: "development" },
@@ -94,8 +94,103 @@ try {
     ).isError,
     true,
   );
+  const folder = await api("/folders", {
+    name: "MCP collaboration",
+    projectPath: "",
+  });
+  const secondAgent = await api("/agents", {
+    provider: "mcp",
+    name: "Second collaborator",
+  });
+  const second = new Client({ name: "second", version: "1" });
+  try {
+    await second.connect(
+      new StdioClientTransport({
+        command: "node",
+        args: ["apps/mcp-server/dist/index.js"],
+        env: {
+          ...process.env,
+          PASSPORT_API_URL: base,
+          PASSPORT_AGENT_TOKEN: secondAgent.token,
+        },
+      }),
+    );
+    for (const a of [agent, secondAgent])
+      await api(`/folders/${folder.id}/agent-grants`, {
+        agentId: a.id,
+        bits: 3,
+      });
+    async function call(c, name, args) {
+      const r = await c.callTool({
+        name,
+        arguments: { folder_id: folder.id, ...args },
+      });
+      assert.ok(!r.isError, JSON.stringify(r));
+      return JSON.parse(r.content[0].text);
+    }
+    const web = await call(client, "create_folder_task", {
+      title: "Web",
+      description: "Build view",
+      work_scope: "web",
+    });
+    const backend = await call(second, "create_folder_task", {
+      title: "API",
+      description: "Build API",
+      work_scope: "api",
+    });
+    await call(client, "claim_folder_task", { task_id: web.id, revision: 1 });
+    const conflict = await second.callTool({
+      name: "claim_folder_task",
+      arguments: { folder_id: folder.id, task_id: web.id, revision: 2 },
+    });
+    assert.equal(conflict.isError, true);
+    await call(second, "claim_folder_task", {
+      task_id: backend.id,
+      revision: 1,
+    });
+    await call(client, "update_folder_task", {
+      task_id: web.id,
+      revision: 2,
+      status: "done",
+      progress: "UI ready for API integration",
+    });
+    const shared = await call(second, "get_folder_tasks", {});
+    assert.equal(
+      shared.find((t) => t.id === web.id).progress,
+      "UI ready for API integration",
+    );
+    const context = await call(second, "get_folder_context", {});
+    assert.ok(context.tasks.some((t) => t.id === web.id));
+    const history = await call(second, "get_folder_task_history", {
+      task_id: web.id,
+    });
+    assert.ok(
+      history.some((t) => t.progress === "UI ready for API integration"),
+    );
+    await call(second, "release_folder_task", {
+      task_id: backend.id,
+      revision: 2,
+    });
+    await api(`/folders/${folder.id}/agent-grants`, {
+      agentId: secondAgent.id,
+      bits: 0,
+    });
+    assert.equal(
+      (
+        await second.callTool({
+          name: "get_folder_tasks",
+          arguments: { folder_id: folder.id },
+        })
+      ).isError,
+      true,
+    );
+  } finally {
+    await second.close();
+    await api(`/folders/${folder.id}?revision=1`, undefined, "DELETE");
+    await api(`/agents/${secondAgent.id}`, undefined, "DELETE");
+  }
   console.log(
-    "PASS: MCP initialize + 11 tools + default deny + proposal + owner approval + shared search + revoked history denial",
+    "PASS: MCP initialize + 17 tools + default deny + proposal + owner approval + shared search + revoked history denial + two-agent task collaboration",
   );
 } finally {
   await client.close();

@@ -52,36 +52,38 @@ GUI에서 **파일 가져오기** 또는 **폴더 가져오기**를 선택하면
 
 공유는 지정한 폴더에만 적용되며 하위 폴더로 자동 상속되지 않습니다. 소유자의 로컬 파일 경로와 원문 출처 경로는 다른 작업자에게 표시하지 않습니다. 철회 후 새 요청은 차단되고 해당 사용자의 에이전트 허용과 경로 연결도 제거됩니다. 이미 내려받은 사본이나 읽은 내용을 회수하는 기능은 아닙니다.
 
-## 5. Codex·Claude 연결
+## 5. Claude·Codex 동시 협업
 
-폴더 화면에서는 자동 연결 설정을 제거했습니다. 기억 가져오기와 사람 간 공유에는 연결 설정이 필요하지 않습니다. 기존 MCP API와 이미 연결된 클라이언트의 권한 검사는 유지됩니다. 신규 에이전트 등록·폴더 허용·경로 연결은 현재 API 설정이 필요하며, 별도 설정 화면은 아직 제공하지 않습니다.
+같은 폴더의 **함께 작업하기**에서 작업 제목·설명·작업 영역을 등록합니다. 예를 들어 Claude는 `apps/web`, Codex는 `apps/api`를 맡습니다. 비어 있는 영역은 프로젝트 전체를 뜻합니다. 현재 작업·담당자·진행 보고·완료 상태가 5초마다 갱신되며, 이전 진행 보고는 이력에서 확인합니다.
 
-이미 발급받아 폴더 권한이 허용된 토큰으로 클라이언트를 연결할 때:
+**Claude·Codex 협업 연결**을 열고 각 도구에 별도의 연결 키를 발급합니다. 같은 토큰을 두 도구가 사용하면 서버가 담당자를 구분할 수 없습니다. 각 연결은 해당 폴더의 읽기+쓰기 권한이 필요합니다. 공유받은 읽기 전용 사용자는 읽기만 연결할 수 있습니다.
 
 ```bash
 read -rs PASSPORT_AGENT_TOKEN
-# 토큰을 붙여넣고 Enter
 export PASSPORT_AGENT_TOKEN
-npm run client:setup
+npm run client:setup -- --provider claude
 unset PASSPORT_AGENT_TOKEN
+# Codex는 별도로 발급한 키로 --provider codex를 실행
 ```
 
-서버 URL을 입력하면 `.data/service-client.json`에 권한 600으로 보관합니다. 원격 서버는 HTTPS만 허용합니다. 기존 전역 Codex/Claude 설정은 변경하지 않습니다. 실제 프로젝트 폴더에서:
+서버 URL을 입력하면 `.data/service-client-claude.json` 또는 `service-client-codex.json`에 권한 600으로 보관합니다. 원격 서버는 HTTPS만 허용합니다. 기존 전역 설정은 변경하지 않습니다. 이전 공용 `service-client.json`은 호환용으로 읽되 협업에는 별도 연결을 사용하세요.
 
-```bash
-cd /home/me/my-project
-node /설치경로/agent-passport/scripts/launch-client.mjs codex
-# 또는
-node /설치경로/agent-passport/scripts/launch-client.mjs claude
-```
+프로젝트 위치에서 `node /설치경로/agent-passport/scripts/launch-client.mjs claude`와 `codex`를 각각 실행하고, 폴더 화면의 작업 지침을 전달합니다. 지침에 폴더 ID가 포함되므로 로컬 경로 바인딩 없이 사용할 수 있습니다.
 
-요청 예시:
+협업 도구:
 
-> get_folder_context로 이 프로젝트의 기억과 인수인계를 읽고 다음 작업을 알려줘. 작업 후 진행 상황은 propose_folder_memory로 제안해 줘.
+- `get_folder_tasks`: 최신 작업·담당자·진행 보고 읽기.
+- `create_folder_task`: 작업과 상대 작업 영역 등록.
+- `claim_folder_task`: 최신 revision으로 담당 요청. 같은 작업/겹치는 영역은 동시에 맡을 수 없습니다.
+- `update_folder_task`: 진행 공유, 도움 요청(`blocked`), 완료(`done`). `active` 보고 시 담당 시간을 30분 연장합니다.
+- `release_folder_task`: 다른 에이전트가 이어받도록 담당 해제.
+- `get_folder_task_history`: 과거 진행 보고/인수인계 읽기. 페이지당 100개.
 
-새 도구는 `get_folder_context`, `search_folder`, `propose_folder_memory`입니다. 기존 8개 기억 도구도 유지됩니다. 도구를 실제로 호출해야 하며 모든 대화가 자동 저장되지는 않습니다. 경로가 여러 개 일치하면 가장 긴 프로젝트 경로를 선택합니다. 컨텍스트는 약 24,000자 예산을 적용하며 잘린 경우 `truncated`가 true입니다. 더 필요한 기억은 검색 도구로 읽을 수 있습니다.
+폴더 컨텍스트에도 최근 작업 20개와 짧은 진행 보고가 포함됩니다. 전체 목록은 `get_folder_tasks`로 읽습니다. 작업은 폴더당 200개까지 보관하며 완료/대기 작업은 GUI에서 삭제할 수 있습니다. 설명·진행·이력은 암호화하여 서버에 저장하고, 폴더 내보내기와 사용량 집계에도 포함합니다.
 
-서버는 사용자 폴더 권한과 해당 에이전트의 폴더 권한을 모두 검사합니다. 에이전트의 쓰기는 검토 대기 제안을 만들며 자기 제안을 승인할 수 없습니다. 연결 토큰은 내 다른 프로젝트까지 자동 허용하지 않습니다.
+담당 만료나 갱신 실패 시 에이전트는 수정을 멈추고 최신 상태를 다시 읽어야 합니다. 이 기능은 서버상의 작업 조정이며 OS 파일 잠금이 아닙니다. 서로 다른 작업 영역과 worktree를 사용하고 병합 전에 검토하세요. 에이전트를 자동 실행하거나 전체 채팅을 실시간 수집하는 기능은 아닙니다.
+
+기존 `get_folder_context`, `search_folder`, `propose_folder_memory`와 8개 기억 도구도 유지됩니다(총 17개). 진행 보고는 팀에 즉시 공유되지만 장기 기억 제안은 기존처럼 사람의 승인이 필요합니다. 공유/에이전트 권한을 철회하면 다음 읽기·쓰기가 차단됩니다.
 
 ## 6. 요금제와 데이터 보관
 

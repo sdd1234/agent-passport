@@ -1,9 +1,10 @@
 {
-  "checkedAt": "2026-09-18T05:21:37.383Z",
+  "checkedAt": "2026-09-18T17:12:14.235Z",
   "postgres": "16",
   "mode": "service",
   "checks": [
     "legacy-schema migration",
+    "collaboration task persistence",
     "account signup and isolation",
     "persistent session after API restart",
     "owner import available without review",
@@ -14,11 +15,11 @@
     "account deletion"
   ],
   "backupRestore": false,
+  "realCollaboration": true,
   "realFolderClients": false,
   "externalUnverified": [
     "public HTTPS deployment",
-    "live Stripe checkout and webhook delivery",
-    "real Codex/Claude invoking new folder tools"
+    "live Stripe checkout and webhook delivery"
   ],
   "logDirectory": ".data/service-verify-*"
 }

@@ -42,3 +42,6 @@ Codex CLI와 Claude Code를 실제로 실행해 양방향 표식 저장/조회 �
 - `node --test scripts/test-overview.mjs`: 원문 근거·날짜 보존, 가져온 시각을 진행일로 오인하지 않음, 미승인/코드/메타데이터 제외. 브라우저에서는 개요→출처→원문과 공유받은 계정의 조회를 확인합니다.
 
 - `node --test scripts/test-timeline.mjs`: 날짜 정렬·한국 날짜 경계·요청/미완료 구분·메타데이터/경로 제외·중복 출처 보존. 폴더 GUI는 격자→상세, 날짜순 전환, 기록 펼치기→원문, 이름 변경·공유 회귀를 검증합니다.
+
+- 협업: Java 동시 담당 경쟁/영역 겹침/만료/오래된 revision/권한 차단·암호화, 브라우저 두 연결 키 발급과 작업 생애주기, 독립 MCP 클라이언트의 담당→진행 공유·철회 검증.
+- `PASSPORT_VERIFY_REAL_COLLABORATION=true npm run verify:service`: 실제 Codex·Claude CLI를 동시에 실행해 합성 작업을 각각 맡고 완료 보고하며, PostgreSQL 재시작 후 보존과 계정 삭제 시 작업/이력 삭제를 검증합니다. 개인 자료는 사용하지 않습니다.

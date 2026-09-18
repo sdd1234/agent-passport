@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Folder as FolderIcon, MoreVertical, ArrowLeft } from "lucide-react";
 import { ImportPanel } from "./ImportPanel";
+import { CollaborationBoard } from "./CollaborationBoard";
 import { FolderEntries } from "./FolderEntries";
 import { ReceivePairing, SendPairing } from "./Pairing";
 type Folder = {
@@ -334,6 +335,11 @@ export function Folders({
                 ))}
               </details>
             )}
+            <CollaborationBoard
+              key={selected.id + ":collaboration"}
+              api={api}
+              folder={selected}
+            />
             <FolderEntries
               key={selected.id + ":" + entryKey}
               api={api}

@@ -64,3 +64,13 @@ Denied retrieval returns HTTP 403 `{ "code": "MEMORY_SCOPE_DENIED" }`. Stale upd
 | DELETE /folders/{id}/members/{userId} | 공유·해당 멤버의 에이전트 허용·경로 매핑 철회 |
 
 이전 지갑/SIWE/앵커/초대 링크 API는 제거했습니다. 코드 발급·입력·확인·취소 요청은 IP 기반 10분당 30회 제한을 공유하며 DB에 저장해 재시작으로 초기화되지 않습니다. 조회는 제한에 포함하지 않습니다. 서버가 발급한 코드는 DB에 SHA-256 해시만 저장하며 한 번만 공유 완료할 수 있습니다. 같은 폴더에 재발급하면 이전 미완료 코드는 취소됩니다. 완료된 권한은 코드 만료와 별개이며 명시적으로 철회해야 합니다.
+
+## Folder collaboration
+
+- `GET /api/folders/{folderId}/tasks`: live tasks. READ membership/grant required.
+- `POST .../tasks`: `{title, description, workScope}`. Relative scope, blank reserves whole folder. Maximum 200 tasks per folder.
+- `PATCH .../tasks/{id}`: `{action: "claim"|"update"|"release", revision, status?, progress?}`. Update status is active/blocked/done. Requires READ+WRITE for agents. Claims last 30 minutes; active updates renew. Conflicts return 409. Non-assignee agents return 403. Authorized human editors may release or manage tasks.
+- `GET .../tasks/{id}/events?offset=0`: last 100 reports with pagination.
+- `DELETE .../tasks/{id}`: human editor only, todo/done tasks.
+
+Folder row serialization and optimistic revisions prevent double claims. Relative scope overlap uses case-insensitive directory prefixes; this is advisory coordination, not filesystem locking. Encrypted task bodies and events are included in folder exports and storage quotas.

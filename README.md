@@ -191,3 +191,7 @@ docs/              기획서 추출문 / 설계 / 화면 / 검증 결과
 ```
 
 [기획서 요구사항 대응표](docs/requirements.md) · [아키텍처](docs/architecture.md) · [API 명세](docs/api.md) · [공식 참고 문서](docs/references.md)
+
+### 폴더에서 Claude·Codex 협업
+
+폴더의 **함께 작업하기**에서 작업을 나눠 맡고 진행·완료·인수인계 이력을 공유합니다. 각 도구는 별도 연결 키로 인증하며, 서버가 중복 작업 영역과 오래된 변경을 차단합니다. 실제 Codex·Claude CLI의 동시 MCP 작업 보고와 PostgreSQL 영속성을 검증했습니다. 파일 잠금·자동 병합·에이전트 자동 실행은 포함하지 않습니다. [연결 및 사용 방법](docs/service-guide.md#5-claudecodex-동시-협업).
