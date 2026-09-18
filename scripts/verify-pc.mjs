@@ -35,13 +35,13 @@ try {
     .getByRole("button", { name: "복구 코드를 보관했습니다", exact: true })
     .click();
   registered = true;
+  await page.getByText("새 폴더", { exact: true }).click();
   await page
     .getByLabel("폴더 이름", { exact: true })
     .fill("PC server verification");
-  await page
-    .getByLabel("로컬 프로젝트 경로", { exact: true })
-    .fill("/pc/verification");
+
   await page.getByRole("button", { name: "폴더 만들기", exact: true }).click();
+  await page.getByText("진행 상황·인수인계", { exact: true }).click();
   await page
     .getByLabel("인수인계 문서", { exact: true })
     .fill("Persistent local PostgreSQL check");

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test("two accounts import, approve, share and revoke project context", async ({
+test("two accounts auto-organize, share and revoke project context", async ({
   browser,
 }) => {
   const a = await browser.newContext(),
@@ -31,22 +31,6 @@ test("two accounts import, approve, share and revoke project context", async ({
         page.getByRole("heading", { name: "프로젝트 · 인수인계." }),
       ).toBeVisible();
     }
-    await owner.getByLabel("폴더 이름", { exact: true }).fill("Shared project");
-    await owner
-      .getByLabel("로컬 프로젝트 경로", { exact: true })
-      .fill("/work/browser-project");
-    await owner
-      .getByRole("button", { name: "폴더 만들기", exact: true })
-      .click();
-    await owner
-      .getByLabel("인수인계 문서", { exact: true })
-      .fill("구현 완료: 계정과 폴더\n다음: 디자인 검토");
-    await owner.getByRole("button", { name: "변경 저장", exact: true }).click();
-    await expect(owner.getByRole("status")).toHaveText("서버에 저장했습니다.");
-    await owner.getByText("기존 기억 가져오기", { exact: true }).click();
-    await owner
-      .getByLabel("기본 대상 폴더")
-      .selectOption({ label: "Shared project" });
     await owner.getByLabel("가져오기 파일").setInputFiles({
       name: "passport-import.json",
       mimeType: "application/json",
@@ -66,29 +50,46 @@ test("two accounts import, approve, share and revoke project context", async ({
         }),
       ),
     });
+    await expect(
+      owner.getByText("1개 기억을 폴더별로 정리했습니다.", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      owner.getByLabel("로컬 프로젝트 경로", { exact: true }),
+    ).toHaveCount(0);
     await owner
-      .getByText("Imported decision · Shared project", { exact: true })
-      .click();
-    await owner.getByLabel("이 항목 가져오기", { exact: false }).check();
-    await owner
-      .getByRole("button", { name: "검토한 항목 서버에 저장", exact: true })
+      .getByRole("button", { name: "Shared project · 내 폴더", exact: true })
       .click();
     await expect(
-      owner.getByText("1개를 검토 대기 상태로 저장했습니다.", { exact: false }),
+      owner.getByRole("heading", { name: "프로젝트 한눈에 보기" }),
     ).toBeVisible();
-    await owner
-      .getByRole("button", {
-        name: "Imported decision decision · 검토 대기 · v1",
-        exact: false,
-      })
-      .click();
-    await owner.getByRole("button", { name: "기억 승인", exact: true }).click();
+    await expect(owner.locator(".overview-decision")).toContainText(
+      "Choose PostgreSQL",
+    );
+    await expect(owner.getByText("새 기억 작성", { exact: true })).toHaveCount(
+      0,
+    );
+    await expect(
+      owner.getByText("기존 Passport 기억 복사", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      owner.getByText("고급 설정 · Codex · Claude 자동 연결", { exact: true }),
+    ).toHaveCount(0);
+    await owner.getByText("원문 1개 보기", { exact: true }).click();
     await expect(
       owner.getByRole("button", {
-        name: "Imported decision decision · 승인됨 · v2",
+        name: "Imported decision decision · 저장됨 · v1",
         exact: false,
       }),
     ).toBeVisible();
+    await owner.getByText("진행 상황·인수인계", { exact: true }).click();
+    await owner
+      .getByLabel("인수인계 문서", { exact: true })
+      .fill("구현 완료: 계정과 폴더\n다음: 디자인 검토");
+    await owner.getByRole("button", { name: "변경 저장", exact: true }).click();
+    await expect(
+      owner.getByText("서버에 저장했습니다.", { exact: true }),
+    ).toBeVisible();
+    await owner.getByText("폴더 공유 · 비공개", { exact: true }).click();
     await owner.screenshot({
       path: "docs/service-projects.png",
       fullPage: true,
@@ -109,6 +110,9 @@ test("two accounts import, approve, share and revoke project context", async ({
     await owner
       .getByRole("button", { name: "상대 확인 후 공유 연결", exact: true })
       .click();
+    await guest
+      .getByText("진행 상황·인수인계 · 작성됨", { exact: true })
+      .click();
     await expect(
       guest.getByLabel("인수인계 문서", { exact: true }),
     ).toHaveValue("구현 완료: 계정과 폴더\n다음: 디자인 검토");
@@ -116,8 +120,11 @@ test("two accounts import, approve, share and revoke project context", async ({
       guest.getByLabel("인수인계 문서", { exact: true }),
     ).toBeDisabled();
     await guest
+      .getByRole("button", { name: "출처 · Imported decision", exact: true })
+      .click();
+    await guest
       .getByRole("button", {
-        name: "Imported decision decision · 승인됨 · v2",
+        name: "Imported decision decision · 저장됨 · v1",
         exact: false,
       })
       .click();
@@ -128,6 +135,7 @@ test("two accounts import, approve, share and revoke project context", async ({
     await owner
       .getByRole("button", { name: "Shared project · 내 폴더", exact: true })
       .click();
+    await owner.getByText("폴더 공유 · 1명과 공유 중", { exact: true }).click();
     await owner.getByRole("button", { name: "공유 철회", exact: true }).click();
     const response = await guest.request.get("/api/folders");
     expect(await response.json()).toEqual([]);

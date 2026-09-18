@@ -78,8 +78,10 @@ public class Folders {
     String user = auth.user(r);
     return db
         .queryForList(
-            "SELECT f.*, CASE WHEN f.owner_id=? THEN 'owner' ELSE m.role END AS role FROM"
-                + " workspace_folders f LEFT JOIN folder_members m ON m.folder_id=f.id AND"
+            "SELECT f.*, (SELECT COUNT(*) FROM folder_entries e WHERE e.folder_id=f.id) AS"
+                + " entry_count, (SELECT COUNT(*) FROM folder_members fm WHERE fm.folder_id=f.id)"
+                + " AS member_count, CASE WHEN f.owner_id=? THEN 'owner' ELSE m.role END AS role"
+                + " FROM workspace_folders f LEFT JOIN folder_members m ON m.folder_id=f.id AND"
                 + " m.user_id=? WHERE f.owner_id=? OR m.user_id=? ORDER BY f.updated_at DESC",
             user,
             user,

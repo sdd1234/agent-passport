@@ -144,11 +144,6 @@ try {
       },
     ],
   });
-  await api(
-    owner,
-    `/folders/${folder.id}/entries/${imported.entryIds[0]}/review`,
-    { accept: true, revision: 1 },
-  );
   const pair = await api(owner, "/pairings", {
     folderId: folder.id,
     role: "editor",
@@ -334,7 +329,7 @@ try {
     "0",
   );
   console.log(
-    "PASS: PostgreSQL legacy migration, service signup, persistent sessions/restart, import/review, sharing, actual MCP folder read/proposal/revoke, export and account deletion.",
+    "PASS: PostgreSQL legacy migration, service signup, persistent sessions/restart, direct import, sharing, actual MCP folder read/proposal/revoke, export and account deletion.",
   );
   fs.writeFileSync(
     path.join(root, "docs/service-validation.json"),
@@ -347,7 +342,7 @@ try {
           "legacy-schema migration",
           "account signup and isolation",
           "persistent session after API restart",
-          "import review",
+          "owner import available without review",
           "two-party single-use code pairing",
           "MCP folder context and proposal",
           "sharing revocation",

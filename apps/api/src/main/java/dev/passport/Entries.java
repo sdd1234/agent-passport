@@ -177,7 +177,27 @@ public class Entries {
     auth.origin(r);
     String owner = owner(r, id, true);
     List<String> ids = new ArrayList<>();
-    for (var item : b.entries()) ids.add(insert(id, item, auth.user(r), "pending"));
+    for (var item : b.entries()) {
+      String entryId = insert(id, item, auth.user(r), "approved");
+      var stored = entry(id, entryId);
+      if ("pending".equals(stored.get("state"))) {
+        int revision = ((Number) stored.get("revision")).intValue();
+        if (db.update(
+                "UPDATE folder_entries SET state='approved',revision=revision+1,updated_at=? WHERE"
+                    + " id=? AND revision=?",
+                System.currentTimeMillis(),
+                entryId,
+                revision)
+            != 1) throw Auth.error(409, "ENTRY_VERSION_CONFLICT");
+        history(
+            entryId,
+            stored.get("title").toString(),
+            crypto.decrypt(stored.get("content").toString()),
+            revision + 1,
+            auth.user(r));
+      }
+      ids.add(entryId);
+    }
     plans.enforce(owner);
     memories.audit(owner, auth.user(r), "FOLDER_IMPORT", id, "ALLOW", null);
     return Map.of("entryIds", ids);
@@ -307,7 +327,7 @@ public class Entries {
                 "memory",
                 Crypto.hash(memoryId + ":" + m.get("current_version"))),
             user,
-            "pending");
+            "approved");
     plans.enforce(owner);
     return Map.of("id", entry);
   }

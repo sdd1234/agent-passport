@@ -76,7 +76,29 @@ class ServiceIntegrationTest {
   }
 
   @Test
-  void importReviewSharedAgentAndRevoke() throws Exception {
+  void importingOwnPendingMemoryRequiresNoSeparateReview() throws Exception {
+    var imported =
+        postJson(
+            "/api/folders/" + folder + "/import",
+            Map.of("entries", List.of(item("ready-source"))),
+            owner);
+    String id = imported.path("entryIds").get(0).asText();
+    db.update("UPDATE folder_entries SET state='pending' WHERE id=?", id);
+    postJson(
+        "/api/folders/" + folder + "/import",
+        Map.of("entries", List.of(item("ready-source"))),
+        owner);
+    assertEquals(
+        "approved",
+        db.queryForObject("SELECT state FROM folder_entries WHERE id=?", String.class, id));
+    assertEquals(
+        1,
+        db.queryForObject(
+            "SELECT COUNT(*) FROM folder_entries WHERE folder_id=?", Integer.class, folder));
+  }
+
+  @Test
+  void ownerImportIsReadyWithoutReviewAndAgentChangesStillNeedApproval() throws Exception {
     var imported =
         postJson(
             "/api/folders/" + folder + "/import",
@@ -118,11 +140,7 @@ class ServiceIntegrationTest {
                 .param("cwd", "/guest/project/src")
                 .header("Authorization", bearer))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.entries.length()").value(0));
-    postJson(
-        "/api/folders/" + folder + "/entries/" + entry + "/review",
-        Map.of("accept", true, "revision", 1),
-        owner);
+        .andExpect(jsonPath("$.entries.length()").value(1));
     mvc.perform(
             get("/api/folders/context")
                 .param("cwd", "/guest/project")

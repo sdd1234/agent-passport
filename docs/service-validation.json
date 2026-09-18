@@ -1,12 +1,12 @@
 {
-  "checkedAt": "2026-09-18T04:32:06.349Z",
+  "checkedAt": "2026-09-18T05:21:37.383Z",
   "postgres": "16",
   "mode": "service",
   "checks": [
     "legacy-schema migration",
     "account signup and isolation",
     "persistent session after API restart",
-    "import review",
+    "owner import available without review",
     "two-party single-use code pairing",
     "MCP folder context and proposal",
     "sharing revocation",

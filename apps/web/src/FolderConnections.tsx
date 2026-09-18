@@ -43,7 +43,7 @@ export function FolderConnections({
   }, [folder.id]);
   return (
     <details>
-      <summary>내 Codex · Claude 연결</summary>
+      <summary>고급 설정 · Codex · Claude 자동 연결</summary>
       {error && <p role="alert">{error}</p>}
       <p>
         공유받은 프로젝트도 내 컴퓨터의 작업 폴더에 연결할 수 있습니다. 아래

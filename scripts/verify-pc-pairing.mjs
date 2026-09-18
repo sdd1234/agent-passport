@@ -40,6 +40,7 @@ try {
   const [sender, receiver] = users;
   const a = sender.page,
     b = receiver.page;
+  await a.getByText("새 폴더", { exact: true }).click();
   await a
     .getByLabel("폴더 이름", { exact: true })
     .fill("OTP pairing verification");
@@ -48,11 +49,13 @@ try {
   );
   await a.getByRole("button", { name: "폴더 만들기", exact: true }).click();
   const folder = await (await response).json();
+  await a.getByText("진행 상황·인수인계", { exact: true }).click();
   await a
     .getByLabel("인수인계 문서", { exact: true })
     .fill("Code sharing handoff verified");
   await a.getByRole("button", { name: "변경 저장", exact: true }).click();
   await expect(a.getByRole("status")).toHaveText("서버에 저장했습니다.");
+  await a.getByText("폴더 공유 · 비공개", { exact: true }).click();
   await a.getByRole("button", { name: "공유 코드 발급", exact: true }).click();
   let code = await a
     .getByLabel("발급된 공유 코드", { exact: true })

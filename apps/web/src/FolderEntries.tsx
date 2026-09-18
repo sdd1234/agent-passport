@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { buildOverview } from "./lib/overview.mjs";
 import type { ApiCall } from "./Account";
 export function FolderEntries({
   api,
@@ -18,11 +19,9 @@ export function FolderEntries({
     [query, setQuery] = useState(""),
     [offset, setOffset] = useState(0),
     [target, setTarget] = useState(""),
-    [title, setTitle] = useState(""),
-    [content, setContent] = useState(""),
-    [kind, setKind] = useState("note"),
-    [legacy, setLegacy] = useState<any[]>([]),
-    [legacyId, setLegacyId] = useState("");
+    [allEntries, setAllEntries] = useState<any[]>([]),
+    [originals, setOriginals] = useState(false);
+  const overview = buildOverview(allEntries);
   const prefix = `/folders/${folder.id}`;
   const editable = folder.role !== "viewer";
   async function refresh(start = offset) {
@@ -33,6 +32,13 @@ export function FolderEntries({
       ),
       api(prefix + "/proposals"),
     ]);
+    const all: any[] = [];
+    for (let page = 0; ; page += 100) {
+      const batch = await api(`${prefix}/entries?offset=${page}`);
+      all.push(...batch);
+      if (batch.length < 100) break;
+    }
+    setAllEntries(all);
     setEntries(rows);
     setProposals(changes);
   }
@@ -56,321 +62,317 @@ export function FolderEntries({
   }
   return (
     <section className="folder-entries">
-      <h3>폴더의 기억 · 진행 상황</h3>
-      {error && <p role="alert">{error}</p>}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          setOffset(0);
-          void run(() => refresh(0));
-        }}
-      >
-        <label>
-          기억 검색
-          <input
-            value={query}
-            maxLength={2000}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <button disabled={busy}>검색</button>
-      </form>
-      <div className="entry-list">
-        {entries.map((e) => (
-          <button
-            disabled={busy}
-            key={e.id}
-            aria-pressed={selected?.id === e.id}
-            onClick={() => {
-              setSelected({ ...e });
-              setHistory([]);
-            }}
-          >
-            <strong>{e.title}</strong>
-            <span>
-              {e.kind} ·{" "}
-              {e.state === "approved"
-                ? "승인됨"
-                : e.state === "pending"
-                  ? "검토 대기"
-                  : "거절됨"}{" "}
-              · v{e.revision}
-            </span>
-          </button>
+      <h3>프로젝트 한눈에 보기</h3>
+      <p className="overview-caption">
+        저장된 원문에서 모은 핵심 기록입니다. 출처를 눌러 전체 맥락을
+        확인하세요.
+      </p>
+      {busy && <p role="status">기록을 불러오는 중…</p>}
+      {folder.handoff && (
+        <div className="handoff-summary">
+          <h4>인수인계 메모</h4>
+          <p>{folder.handoff}</p>
+        </div>
+      )}
+      <div className="overview-grid">
+        {(
+          [
+            ["goal", "목표와 배경"],
+            ["decision", "결정 사항"],
+            ["progress", "진행 기록"],
+            ["next", "다음 작업"],
+          ] as const
+        ).map(([key, label], index) => (
+          <section className={`overview-card overview-${key}`} key={key}>
+            <h4>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              {label}
+            </h4>
+            {!overview[key].length && (
+              <p className="overview-empty">
+                원문에 명시된 기록이 아직 없습니다.
+              </p>
+            )}
+            {overview[key].slice(0, 4).map((item, i) => (
+              <div className="overview-item" key={i}>
+                {item.date && <time>{item.date}</time>}
+                <p>{item.text}</p>
+                <button
+                  className="source-link"
+                  onClick={() => {
+                    setSelected({
+                      ...allEntries.find((e) => e.id === item.entryId),
+                    });
+                    setHistory([]);
+                    setOriginals(true);
+                    requestAnimationFrame(() =>
+                      document
+                        .getElementById("folder-originals")
+                        ?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        }),
+                    );
+                  }}
+                >
+                  출처 · {item.title}
+                </button>
+              </div>
+            ))}
+            {overview[key].length > 4 && (
+              <details>
+                <summary>기록 {overview[key].length - 4}개 더 보기</summary>
+                {overview[key].slice(4).map((item, i) => (
+                  <div className="overview-item" key={i}>
+                    <p>
+                      {item.date && <time>{item.date} · </time>}
+                      {item.text}
+                    </p>
+                    <button
+                      className="source-link"
+                      onClick={() => {
+                        setSelected({
+                          ...allEntries.find((e) => e.id === item.entryId),
+                        });
+                        setHistory([]);
+                        setOriginals(true);
+                        requestAnimationFrame(() =>
+                          document
+                            .getElementById("folder-originals")
+                            ?.scrollIntoView({ behavior: "smooth" }),
+                        );
+                      }}
+                    >
+                      출처 · {item.title}
+                    </button>
+                  </div>
+                ))}
+              </details>
+            )}
+          </section>
         ))}
       </div>
-      <div>
-        <button
-          disabled={busy || offset === 0}
-          onClick={() =>
-            void run(async () => {
-              const n = Math.max(0, offset - 100);
-              setOffset(n);
-              await refresh(n);
-            })
-          }
+      <details
+        id="folder-originals"
+        open={originals}
+        onToggle={(e) => setOriginals(e.currentTarget.open)}
+      >
+        <summary>원문 {allEntries.length}개 보기</summary>
+        {error && <p role="alert">{error}</p>}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setOffset(0);
+            void run(() => refresh(0));
+          }}
         >
-          이전 항목
-        </button>
-        <button
-          disabled={busy || entries.length < 100}
-          onClick={() =>
-            void run(async () => {
-              const n = offset + 100;
-              setOffset(n);
-              await refresh(n);
-            })
-          }
-        >
-          다음 항목
-        </button>
-      </div>
-      {selected && (
-        <div className="entry-detail">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
+          <label>
+            기억 검색
+            <input
+              value={query}
+              maxLength={2000}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <button disabled={busy}>검색</button>
+        </form>
+        <div className="entry-list">
+          {entries.map((e) => (
+            <button
+              disabled={busy}
+              key={e.id}
+              aria-pressed={selected?.id === e.id}
+              onClick={() => {
+                setSelected({ ...e });
+                setHistory([]);
+              }}
+            >
+              <strong>{e.title}</strong>
+              <span>
+                {e.kind} ·{" "}
+                {e.state === "approved"
+                  ? "저장됨"
+                  : e.state === "pending"
+                    ? "검토 대기"
+                    : "거절됨"}{" "}
+                · v{e.revision}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div>
+          <button
+            disabled={busy || offset === 0}
+            onClick={() =>
               void run(async () => {
-                await mutate(
-                  `/entries/${selected.id}`,
-                  {
-                    title: selected.title,
-                    content: selected.content,
-                    revision: selected.revision,
-                  },
-                  "PATCH",
-                );
-                setSelected(null);
-              });
-            }}
+                const n = Math.max(0, offset - 100);
+                setOffset(n);
+                await refresh(n);
+              })
+            }
           >
-            <label>
-              기억 제목
-              <input
-                required
-                maxLength={200}
-                disabled={!editable}
-                value={selected.title}
-                onChange={(e) =>
-                  setSelected({ ...selected, title: e.target.value })
-                }
-              />
-            </label>
-            <label>
-              기억 내용
-              <textarea
-                aria-label="기억 내용"
-                rows={8}
-                required
-                maxLength={50000}
-                disabled={!editable}
-                value={selected.content}
-                onChange={(e) =>
-                  setSelected({ ...selected, content: e.target.value })
-                }
-              />
-            </label>
-            {selected.source && <small>출처: {selected.source}</small>}
-            {editable && <button disabled={busy}>기억 수정 저장</button>}
-          </form>
-          {editable && selected.state === "pending" && (
-            <div>
-              {[true, false].map((accept) => (
+            이전 항목
+          </button>
+          <button
+            disabled={busy || entries.length < 100}
+            onClick={() =>
+              void run(async () => {
+                const n = offset + 100;
+                setOffset(n);
+                await refresh(n);
+              })
+            }
+          >
+            다음 항목
+          </button>
+        </div>
+        {selected && (
+          <div className="entry-detail">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void run(async () => {
+                  await mutate(
+                    `/entries/${selected.id}`,
+                    {
+                      title: selected.title,
+                      content: selected.content,
+                      revision: selected.revision,
+                    },
+                    "PATCH",
+                  );
+                  setSelected(null);
+                });
+              }}
+            >
+              <label>
+                기억 제목
+                <input
+                  required
+                  maxLength={200}
+                  disabled={!editable}
+                  value={selected.title}
+                  onChange={(e) =>
+                    setSelected({ ...selected, title: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                기억 내용
+                <textarea
+                  aria-label="기억 내용"
+                  rows={8}
+                  required
+                  maxLength={50000}
+                  disabled={!editable}
+                  value={selected.content}
+                  onChange={(e) =>
+                    setSelected({ ...selected, content: e.target.value })
+                  }
+                />
+              </label>
+              {selected.source && <small>출처: {selected.source}</small>}
+              {editable && <button disabled={busy}>기억 수정 저장</button>}
+            </form>
+            {editable && selected.state === "pending" && (
+              <div>
+                {[true, false].map((accept) => (
+                  <button
+                    disabled={busy}
+                    key={String(accept)}
+                    onClick={() =>
+                      void run(async () => {
+                        await mutate(`/entries/${selected.id}/review`, {
+                          accept,
+                          revision: selected.revision,
+                        });
+                        setSelected(null);
+                      })
+                    }
+                  >
+                    {accept ? "기억 승인" : "기억 거절"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              disabled={busy}
+              onClick={() =>
+                void run(async () =>
+                  setHistory(
+                    await api(`${prefix}/entries/${selected.id}/versions`),
+                  ),
+                )
+              }
+            >
+              기억 이력 보기
+            </button>
+            {history.map((v) => (
+              <details key={v.revision}>
+                <summary>
+                  v{v.revision} · {new Date(v.updated_at).toLocaleString()}
+                </summary>
+                <pre>{v.content}</pre>
+              </details>
+            ))}
+            {folder.role === "owner" && (
+              <div>
+                <label>
+                  이동할 폴더
+                  <select
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value)}
+                  >
+                    <option value="">선택</option>
+                    {folders
+                      .filter((f) => f.role === "owner" && f.id !== folder.id)
+                      .map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <p>
+                  이동한 기억과 이력에는 대상 폴더의 공유 권한이 적용됩니다.
+                </p>
                 <button
-                  disabled={busy}
-                  key={String(accept)}
+                  disabled={busy || !target}
                   onClick={() =>
                     void run(async () => {
-                      await mutate(`/entries/${selected.id}/review`, {
-                        accept,
+                      await mutate(`/entries/${selected.id}/move`, {
+                        folderId: target,
                         revision: selected.revision,
                       });
                       setSelected(null);
                     })
                   }
                 >
-                  {accept ? "기억 승인" : "기억 거절"}
+                  기억 이동
                 </button>
-              ))}
-            </div>
-          )}
-          <button
-            disabled={busy}
-            onClick={() =>
-              void run(async () =>
-                setHistory(
-                  await api(`${prefix}/entries/${selected.id}/versions`),
-                ),
-              )
-            }
-          >
-            기억 이력 보기
-          </button>
-          {history.map((v) => (
-            <details key={v.revision}>
-              <summary>
-                v{v.revision} · {new Date(v.updated_at).toLocaleString()}
-              </summary>
-              <pre>{v.content}</pre>
-            </details>
-          ))}
-          {folder.role === "owner" && (
-            <div>
-              <label>
-                이동할 폴더
-                <select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                >
-                  <option value="">선택</option>
-                  {folders
-                    .filter((f) => f.role === "owner" && f.id !== folder.id)
-                    .map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <p>이동한 기억과 이력에는 대상 폴더의 공유 권한이 적용됩니다.</p>
+              </div>
+            )}
+            {editable && (
               <button
-                disabled={busy || !target}
-                onClick={() =>
-                  void run(async () => {
-                    await mutate(`/entries/${selected.id}/move`, {
-                      folderId: target,
-                      revision: selected.revision,
+                disabled={busy}
+                onClick={() => {
+                  if (window.confirm("이 기억과 버전 이력을 삭제할까요?"))
+                    void run(async () => {
+                      await mutate(
+                        `/entries/${selected.id}?revision=${selected.revision}`,
+                        undefined,
+                        "DELETE",
+                      );
+                      setSelected(null);
                     });
-                    setSelected(null);
-                  })
-                }
+                }}
               >
-                기억 이동
+                기억 삭제
               </button>
-            </div>
-          )}
-          {editable && (
-            <button
-              disabled={busy}
-              onClick={() => {
-                if (window.confirm("이 기억과 버전 이력을 삭제할까요?"))
-                  void run(async () => {
-                    await mutate(
-                      `/entries/${selected.id}?revision=${selected.revision}`,
-                      undefined,
-                      "DELETE",
-                    );
-                    setSelected(null);
-                  });
-              }}
-            >
-              기억 삭제
-            </button>
-          )}
-        </div>
-      )}
-      {editable && (
-        <details>
-          <summary>새 기억 작성</summary>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void run(async () => {
-                await mutate("/entries", {
-                  title,
-                  content,
-                  kind,
-                  source: "직접 작성",
-                });
-                setTitle("");
-                setContent("");
-              });
-            }}
-          >
-            <label>
-              새 기억 제목
-              <input
-                required
-                maxLength={200}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </label>
-            <label>
-              종류
-              <select value={kind} onChange={(e) => setKind(e.target.value)}>
-                {[
-                  ["note", "메모"],
-                  ["decision", "결정 사항"],
-                  ["progress", "진행 상황"],
-                  ["todo", "다음 작업"],
-                ].map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              새 기억 내용
-              <textarea
-                aria-label="새 기억 내용"
-                required
-                rows={6}
-                maxLength={50000}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-              />
-            </label>
-            <button disabled={busy}>새 기억 저장</button>
-          </form>
-        </details>
-      )}
-      {editable && (
-        <details>
-          <summary>기존 Passport 기억 복사</summary>
-          <button
-            disabled={busy}
-            onClick={() =>
-              void run(async () =>
-                setLegacy(
-                  (await api("/memories")).filter(
-                    (m: any) => m.status === "current",
-                  ),
-                ),
-              )
-            }
-          >
-            내 기존 기억 불러오기
-          </button>
-          <label>
-            복사할 기억
-            <select
-              value={legacyId}
-              onChange={(e) => setLegacyId(e.target.value)}
-            >
-              <option value="">선택</option>
-              {legacy.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.project} · {m.canonical_key}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p>
-            원본은 유지되며 이 폴더의 검토 대기 기억으로 복사합니다. 승인 후 이
-            폴더에 허용된 에이전트가 읽을 수 있습니다.
-          </p>
-          <button
-            disabled={busy || !legacyId}
-            onClick={() =>
-              void run(() => mutate(`/copy-memory/${legacyId}`, {}))
-            }
-          >
-            선택한 기억 복사
-          </button>
-        </details>
-      )}
+            )}
+          </div>
+        )}
+      </details>
       {proposals.length > 0 && (
         <>
           <h4>에이전트가 제안한 업데이트</h4>

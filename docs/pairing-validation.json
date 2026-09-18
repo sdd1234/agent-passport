@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-09-18T04:33:23.877Z",
+  "verifiedAt": "2026-09-18T05:22:00.278Z",
   "environment": "PC service, persistent PostgreSQL, two isolated Chromium contexts",
   "checks": [
     "no wallet login",

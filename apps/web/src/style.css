@@ -2004,3 +2004,144 @@ td.mono {
   padding: 16px;
   border-radius: 12px;
 }
+
+/* Folder-first memory library. */
+.import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.import-picker {
+  flex: 1;
+  min-width: 220px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.folder-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.folder-tools > details {
+  flex: 1;
+  min-width: 220px;
+}
+.folder-card {
+  padding: 8px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.folder-card > small {
+  display: block;
+  padding: 7px 8px;
+  color: var(--muted);
+}
+.folder-card .folder-share-link {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #315b48;
+  background: transparent;
+}
+.folder-sharing,
+.folder-handoff {
+  margin-bottom: 14px;
+}
+.folder-empty {
+  padding: 28px;
+}
+
+.folder-columns > nav {
+  max-height: 68vh;
+  overflow-y: auto;
+  align-self: start;
+  padding-right: 8px;
+}
+.folder-columns > nav > input {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: white;
+}
+@media (max-width: 700px) {
+  .folder-columns > nav {
+    max-height: 38vh;
+  }
+}
+.overview-caption,
+.overview-empty {
+  color: #64748b;
+  font-size: 13px;
+}
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.overview-card {
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  padding: 18px;
+  background: #f8fafc;
+  min-width: 0;
+}
+.overview-card h4 {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 16px;
+}
+.overview-card h4 span {
+  color: #64748b;
+  font-size: 12px;
+}
+.overview-next {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.overview-item {
+  border-left: 2px solid #cbd5e1;
+  padding-left: 12px;
+  margin: 14px 0;
+  overflow-wrap: anywhere;
+}
+.overview-item p {
+  margin: 5px 0;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.65;
+  max-height: 160px;
+  overflow: auto;
+}
+.overview-item time {
+  font-size: 12px;
+  color: #64748b;
+}
+.source-link {
+  background: transparent;
+  color: #2563eb;
+  border: 0;
+  padding: 3px 0;
+  font-size: 12px;
+  text-align: left;
+}
+.handoff-summary {
+  padding: 16px;
+  background: #f0fdfa;
+  border-radius: 12px;
+}
+.handoff-summary p {
+  white-space: pre-wrap;
+}
+#folder-originals > summary {
+  padding: 14px 0;
+  font-weight: 600;
+}
+@media (max-width: 850px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { ImportPanel } from "./ImportPanel";
 import { FolderEntries } from "./FolderEntries";
 import { ReceivePairing, SendPairing } from "./Pairing";
-import { FolderConnections } from "./FolderConnections";
 type Folder = {
   id: string;
   name: string;
@@ -11,6 +10,8 @@ type Folder = {
   handoff: string;
   revision: number;
   role: string;
+  entry_count?: number;
+  member_count?: number;
 };
 type Member = { user_id: string; role: string };
 export function Folders({
@@ -22,13 +23,14 @@ export function Folders({
     [selected, setSelected] = useState<Folder | null>(null),
     [members, setMembers] = useState<Member[]>([]);
   const [name, setName] = useState(""),
-    [path, setPath] = useState(""),
     [parent, setParent] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
     [moveParent, setMoveParent] = useState(""),
-    [entryKey, setEntryKey] = useState(0);
+    [entryKey, setEntryKey] = useState(0),
+    [sharing, setSharing] = useState(false),
+    [folderSearch, setFolderSearch] = useState("");
   const refresh = async () => setFolders(await api("/folders"));
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -47,15 +49,14 @@ export function Folders({
   useEffect(() => {
     void run(refresh);
   }, []);
-  async function select(id: string) {
+  async function select(id: string, share = false) {
     setSelected(null);
     setMembers([]);
+    setSharing(share);
     const f = await api(`/folders/${id}`);
     setSelected(f);
     setMoveParent(f.parent_id || "");
-    if (f.role === "owner") {
-      setMembers(await api(`/folders/${id}/members`));
-    }
+    if (f.role === "owner") setMembers(await api(`/folders/${id}/members`));
   }
   function folderPath(folder: Folder) {
     const parts = [folder.name],
@@ -70,70 +71,31 @@ export function Folders({
     }
     return parts.join(" / ");
   }
+  async function save() {
+    if (!selected) return;
+    setSelected(
+      await api(
+        `/folders/${selected.id}`,
+        {
+          name: selected.name,
+          projectPath: selected.project_path,
+          handoff: selected.handoff,
+          revision: selected.revision,
+        },
+        "PATCH",
+      ),
+    );
+    await refresh();
+    setNotice("서버에 저장했습니다.");
+  }
   return (
     <section className="folder-workspace">
       <p>
-        프로젝트 폴더와 인수인계 문서를 서버에 저장합니다. 공유는 선택한
-        폴더에만 적용됩니다. 하위 폴더는 별도로 공유하세요.
+        기억을 가져오면 폴더별로 정리됩니다. 기본은 비공개이며, 원하는 폴더만
+        공유할 수 있습니다.
       </p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
-      <ReceivePairing
-        api={api}
-        onConnected={async (id) => {
-          await refresh();
-          await select(id);
-        }}
-      />
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            const f = await api("/folders", {
-              name,
-              projectPath: path,
-              parentId: parent || null,
-            });
-            setName("");
-            setPath("");
-            await refresh();
-            await select(f.id);
-          });
-        }}
-      >
-        <label>
-          폴더 이름
-          <input
-            required
-            maxLength={120}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <label>
-          로컬 프로젝트 경로
-          <input
-            maxLength={1000}
-            placeholder="/home/me/project (선택)"
-            value={path}
-            onChange={(e) => setPath(e.target.value)}
-          />
-        </label>
-        <label>
-          상위 폴더
-          <select value={parent} onChange={(e) => setParent(e.target.value)}>
-            <option value="">최상위</option>
-            {folders
-              .filter((f) => f.role === "owner")
-              .map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-          </select>
-        </label>
-        <button disabled={busy}>폴더 만들기</button>
-      </form>
       <ImportPanel
         api={api}
         folders={folders}
@@ -142,161 +104,141 @@ export function Folders({
           setEntryKey((k) => k + 1);
         }}
       />
+      <div className="folder-tools">
+        <details>
+          <summary>새 폴더</summary>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void run(async () => {
+                const f = await api("/folders", {
+                  name,
+                  projectPath: "",
+                  parentId: parent || null,
+                });
+                setName("");
+                await refresh();
+                await select(f.id);
+              });
+            }}
+          >
+            <label>
+              폴더 이름
+              <input
+                required
+                maxLength={120}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </label>
+            <label>
+              상위 폴더
+              <select
+                value={parent}
+                onChange={(e) => setParent(e.target.value)}
+              >
+                <option value="">최상위</option>
+                {folders
+                  .filter((f) => f.role === "owner")
+                  .map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button disabled={busy}>폴더 만들기</button>
+          </form>
+        </details>
+        <ReceivePairing
+          api={api}
+          onConnected={async (id) => {
+            await refresh();
+            await select(id);
+          }}
+        />
+      </div>
       <div className="folder-columns">
         <nav aria-label="프로젝트 폴더 목록">
-          {folders.length === 0 && <p>첫 프로젝트 폴더를 만들어 주세요.</p>}
+          <input
+            aria-label="폴더 찾기"
+            placeholder="폴더 찾기"
+            value={folderSearch}
+            onChange={(e) => setFolderSearch(e.target.value)}
+          />
+          {folders.length === 0 && (
+            <p>기억 파일이나 폴더를 가져와 시작하세요.</p>
+          )}
           {[...folders]
+            .filter((f) =>
+              folderPath(f)
+                .toLocaleLowerCase()
+                .includes(folderSearch.toLocaleLowerCase()),
+            )
             .sort((a, b) => folderPath(a).localeCompare(folderPath(b), "ko"))
             .map((f) => (
-              <button
-                disabled={busy}
-                key={f.id}
-                aria-pressed={selected?.id === f.id}
-                onClick={() => void run(() => select(f.id))}
-              >
-                {folderPath(f)} ·{" "}
-                {f.role === "owner"
-                  ? "내 폴더"
-                  : f.role === "editor"
-                    ? "공유 · 편집"
-                    : "공유 · 읽기"}
-              </button>
+              <div className="folder-card" key={f.id}>
+                <button
+                  disabled={busy}
+                  aria-pressed={selected?.id === f.id}
+                  onClick={() => void run(() => select(f.id))}
+                >
+                  {folderPath(f)} ·{" "}
+                  {f.role === "owner"
+                    ? "내 폴더"
+                    : f.role === "editor"
+                      ? "공유 · 편집"
+                      : "공유 · 읽기"}
+                </button>
+                <small>
+                  기억 {f.entry_count || 0}개 ·{" "}
+                  {f.role === "owner"
+                    ? f.member_count
+                      ? `${f.member_count}명과 공유 중`
+                      : "비공개"
+                    : "공유받음"}
+                </small>
+                {f.role === "owner" && (
+                  <button
+                    className="folder-share-link"
+                    aria-label={`${f.name} 공유 설정`}
+                    disabled={busy}
+                    onClick={() => void run(() => select(f.id, true))}
+                  >
+                    공유 설정
+                  </button>
+                )}
+              </div>
             ))}
         </nav>
         {selected && (
-          <article>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void run(async () => {
-                  const f = await api(
-                    `/folders/${selected.id}`,
-                    {
-                      name: selected.name,
-                      projectPath: selected.project_path,
-                      handoff: selected.handoff,
-                      revision: selected.revision,
-                    },
-                    "PATCH",
-                  );
-                  setSelected(f);
-                  await refresh();
-                  setNotice("서버에 저장했습니다.");
-                });
-              }}
-            >
-              <label>
-                이름
-                <input
-                  required
-                  maxLength={120}
-                  disabled={busy || selected.role === "viewer"}
-                  value={selected.name}
-                  onChange={(e) =>
-                    setSelected({ ...selected, name: e.target.value })
-                  }
-                />
-              </label>
-              {selected.role === "owner" && (
-                <label>
-                  연결할 프로젝트 경로
-                  <input
-                    maxLength={1000}
-                    value={selected.project_path}
-                    onChange={(e) =>
-                      setSelected({ ...selected, project_path: e.target.value })
-                    }
-                  />
-                </label>
-              )}
-              <label>
-                인수인계 문서
-                <textarea
-                  aria-label="인수인계 문서"
-                  rows={14}
-                  maxLength={50000}
-                  disabled={busy || selected.role === "viewer"}
-                  placeholder="목표와 배경&#10;현재 진행 상황&#10;결정 사항과 근거&#10;다음 작업&#10;막힌 점과 참고 자료"
-                  value={selected.handoff}
-                  onChange={(e) =>
-                    setSelected({ ...selected, handoff: e.target.value })
-                  }
-                />
-              </label>
-              <p>
-                버전 {selected.revision} · 다른 작업자의 변경과 충돌하면 다시
-                열어 확인하세요.
-              </p>
-              {selected.role !== "viewer" && (
-                <button disabled={busy}>변경 저장</button>
-              )}
-            </form>
+          <article key={selected.id}>
+            <h2>{selected.name}</h2>
             {selected.role === "owner" && (
-              <>
-                <h3>폴더 위치와 내보내기</h3>
-                <label>
-                  새 상위 폴더
-                  <select
-                    value={moveParent}
-                    onChange={(e) => setMoveParent(e.target.value)}
-                  >
-                    <option value="">최상위</option>
-                    {folders
-                      .filter((f) => f.role === "owner" && f.id !== selected.id)
-                      .map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      await api(`/folders/${selected.id}/move`, {
-                        parentId: moveParent || null,
-                        revision: selected.revision,
-                      });
-                      await refresh();
-                      await select(selected.id);
-                    })
-                  }
-                >
-                  폴더 이동
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "폴더와 모든 기억·공유를 삭제할까요? 하위 폴더는 먼저 이동하거나 삭제해야 합니다.",
-                      )
-                    )
-                      void run(async () => {
-                        await api(
-                          `/folders/${selected.id}?revision=${selected.revision}`,
-                          undefined,
-                          "DELETE",
-                        );
-                        setSelected(null);
-                        await refresh();
-                      });
-                  }}
-                >
-                  폴더 삭제
-                </button>
+              <details
+                className="folder-sharing"
+                open={sharing}
+                onToggle={(e) => setSharing(e.currentTarget.open)}
+              >
+                <summary>
+                  폴더 공유 ·{" "}
+                  {members.length ? `${members.length}명과 공유 중` : "비공개"}
+                </summary>
+                <p>
+                  이 폴더의 기억과 인수인계 내용만 공유합니다. 다른 폴더는
+                  비공개로 유지됩니다.
+                </p>
                 <SendPairing
-                  key={selected.id}
                   api={api}
                   folderId={selected.id}
-                  onConnected={async () =>
-                    setMembers(await api(`/folders/${selected.id}/members`))
-                  }
+                  onConnected={async () => {
+                    setMembers(await api(`/folders/${selected.id}/members`));
+                    await refresh();
+                  }}
                 />
                 {members.map((m) => (
                   <p key={m.user_id}>
-                    {m.user_id} · {m.role}{" "}
+                    {m.user_id} · {m.role === "editor" ? "편집" : "읽기"}{" "}
                     <button
                       disabled={busy}
                       onClick={() =>
@@ -309,6 +251,7 @@ export function Folders({
                           setMembers(
                             await api(`/folders/${selected.id}/members`),
                           );
+                          await refresh();
                         })
                       }
                     >
@@ -316,39 +259,148 @@ export function Folders({
                     </button>
                   </p>
                 ))}
-              </>
+              </details>
             )}
-            <button
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  const data = await api(`/folders/${selected.id}/export`);
-                  const url = URL.createObjectURL(
-                    new Blob([JSON.stringify(data, null, 2)], {
-                      type: "application/json",
-                    }),
-                  );
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "passport-folder-export.json";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                })
-              }
-            >
-              폴더 내보내기
-            </button>
-            <FolderConnections
-              key={selected.id + "connections"}
-              api={api}
-              folder={selected}
-            />
             <FolderEntries
               key={selected.id + ":" + entryKey}
               api={api}
               folder={selected}
               folders={folders}
             />
+            <details className="folder-handoff">
+              <summary>
+                진행 상황·인수인계 {selected.handoff ? "· 작성됨" : ""}
+              </summary>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void run(save);
+                }}
+              >
+                <label>
+                  인수인계 문서
+                  <textarea
+                    aria-label="인수인계 문서"
+                    rows={6}
+                    maxLength={50000}
+                    disabled={busy || selected.role === "viewer"}
+                    placeholder="현재 진행 상황과 다음 작업을 적어 주세요."
+                    value={selected.handoff}
+                    onChange={(e) =>
+                      setSelected({ ...selected, handoff: e.target.value })
+                    }
+                  />
+                </label>
+                {selected.role !== "viewer" && (
+                  <button disabled={busy}>변경 저장</button>
+                )}
+              </form>
+            </details>
+            <details>
+              <summary aria-label="폴더 옵션">••• 폴더 옵션</summary>
+              {selected.role === "owner" && (
+                <>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void run(save);
+                    }}
+                  >
+                    <label>
+                      이름
+                      <input
+                        required
+                        maxLength={120}
+                        value={selected.name}
+                        onChange={(e) =>
+                          setSelected({ ...selected, name: e.target.value })
+                        }
+                      />
+                    </label>
+                    <button disabled={busy}>이름 저장</button>
+                  </form>
+                  <label>
+                    새 상위 폴더
+                    <select
+                      value={moveParent}
+                      onChange={(e) => setMoveParent(e.target.value)}
+                    >
+                      <option value="">최상위</option>
+                      {folders
+                        .filter(
+                          (f) => f.role === "owner" && f.id !== selected.id,
+                        )
+                        .map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        await api(`/folders/${selected.id}/move`, {
+                          parentId: moveParent || null,
+                          revision: selected.revision,
+                        });
+                        await refresh();
+                        await select(selected.id);
+                      })
+                    }
+                  >
+                    폴더 이동
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      if (window.confirm("폴더와 모든 기억·공유를 삭제할까요?"))
+                        void run(async () => {
+                          await api(
+                            `/folders/${selected.id}?revision=${selected.revision}`,
+                            undefined,
+                            "DELETE",
+                          );
+                          setSelected(null);
+                          await refresh();
+                        });
+                    }}
+                  >
+                    폴더 삭제
+                  </button>
+                </>
+              )}
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const data = await api(`/folders/${selected.id}/export`);
+                    const url = URL.createObjectURL(
+                      new Blob([JSON.stringify(data, null, 2)], {
+                        type: "application/json",
+                      }),
+                    );
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "passport-folder.json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  })
+                }
+              >
+                폴더 내보내기
+              </button>
+            </details>
+          </article>
+        )}
+        {!selected && folders.length > 0 && (
+          <article className="folder-empty">
+            <h2>폴더를 선택하세요</h2>
+            <p>
+              정리된 기억을 읽거나, 공유 설정에서 이 폴더를 다른 작업자와 연결할
+              수 있습니다.
+            </p>
           </article>
         )}
       </div>
