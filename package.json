@@ -23,7 +23,8 @@
     "verify:service": "bash scripts/verify-service.sh",
     "server:start": "bash scripts/serve-pc.sh",
     "server:install": "bash scripts/install-pc-service.sh",
-    "test:organizer": "node --test scripts/test-organizer.mjs"
+    "test:organizer": "node --test scripts/test-organizer.mjs",
+    "conversation:export": "node scripts/export-conversations.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

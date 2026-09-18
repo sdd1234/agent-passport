@@ -1,6 +1,12 @@
 // Extract source-backed statements. Import timestamps are never project events.
 export function buildOverview(entries) {
   const sections = { goal: [], decision: [], progress: [], next: [] };
+  const seen = {
+    goal: new Set(),
+    decision: new Set(),
+    progress: new Set(),
+    next: new Set(),
+  };
   const labels = [
     [
       "next",
@@ -51,13 +57,14 @@ export function buildOverview(entries) {
       const category =
         labels.find(([, re]) => re.test(text))?.[0] || section || "goal";
       const items = sections[category];
-      if (!items.some((item) => item.text === text))
+      if (!seen[category].has(text))
         items.push({
           text,
           entryId: entry.id,
           title: entry.title,
           date: text.match(/\b20\d{2}-\d{2}-\d{2}\b/)?.[0] || date,
         });
+      seen[category].add(text);
     }
   }
   return sections;
