@@ -40,3 +40,5 @@ Real OpenAI/Anthropic generation/extraction, live embedding quality still requir
 Codex CLI와 Claude Code를 실제로 실행해 양방향 표식 저장/조회 및 두 클라이언트의 revoke 차단을 검증했습니다. [실제 클라이언트 결과](real-client-results.json)와 [재현 안내](real-clients.md)를 참고하세요. 기존 단위/MCP SDK 테스트와 별도로 실제 로그인된 모델을 호출했습니다.
 
 - `node --test scripts/test-overview.mjs`: 원문 근거·날짜 보존, 가져온 시각을 진행일로 오인하지 않음, 미승인/코드/메타데이터 제외. 브라우저에서는 개요→출처→원문과 공유받은 계정의 조회를 확인합니다.
+
+- `node --test scripts/test-timeline.mjs`: 날짜 정렬·한국 날짜 경계·요청/미완료 구분·메타데이터/경로 제외·중복 출처 보존. 폴더 GUI는 격자→상세, 날짜순 전환, 기록 펼치기→원문, 이름 변경·공유 회귀를 검증합니다.

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Folder as FolderIcon, MoreVertical, ArrowLeft } from "lucide-react";
 import { ImportPanel } from "./ImportPanel";
 import { FolderEntries } from "./FolderEntries";
 import { ReceivePairing, SendPairing } from "./Pairing";
@@ -12,6 +13,7 @@ type Folder = {
   role: string;
   entry_count?: number;
   member_count?: number;
+  providers?: string[];
 };
 type Member = { user_id: string; role: string };
 export function Folders({
@@ -30,6 +32,7 @@ export function Folders({
     [moveParent, setMoveParent] = useState(""),
     [entryKey, setEntryKey] = useState(0),
     [sharing, setSharing] = useState(false),
+    [managing, setManaging] = useState(false),
     [folderSearch, setFolderSearch] = useState("");
   const refresh = async () => setFolders(await api("/folders"));
   const run = async (fn: () => Promise<void>) => {
@@ -49,7 +52,8 @@ export function Folders({
   useEffect(() => {
     void run(refresh);
   }, []);
-  async function select(id: string, share = false) {
+  async function select(id: string, share = false, manage = false) {
+    setManaging(manage);
     setSelected(null);
     setMembers([]);
     setSharing(share);
@@ -58,6 +62,12 @@ export function Folders({
     setMoveParent(f.parent_id || "");
     if (f.role === "owner") setMembers(await api(`/folders/${id}/members`));
   }
+  useEffect(() => {
+    if (managing && selected)
+      document
+        .getElementById("folder-options")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [managing, selected?.id]);
   function folderPath(folder: Folder) {
     const parts = [folder.name],
       seen = new Set([folder.id]);
@@ -90,127 +100,190 @@ export function Folders({
   }
   return (
     <section className="folder-workspace">
-      <p>
-        기억을 가져오면 폴더별로 정리됩니다. 기본은 비공개이며, 원하는 폴더만
-        공유할 수 있습니다.
-      </p>
-      {error && <p role="alert">{error}</p>}
-      {notice && <p role="status">{notice}</p>}
-      <ImportPanel
-        api={api}
-        folders={folders}
-        onImported={async () => {
-          await refresh();
-          setEntryKey((k) => k + 1);
-        }}
-      />
-      <div className="folder-tools">
-        <details>
-          <summary>새 폴더</summary>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void run(async () => {
-                const f = await api("/folders", {
-                  name,
-                  projectPath: "",
-                  parentId: parent || null,
-                });
-                setName("");
-                await refresh();
-                await select(f.id);
-              });
+      <div className="drive-heading">
+        {selected ? (
+          <button
+            className="drive-back"
+            onClick={() => {
+              setSelected(null);
+              void run(refresh);
             }}
           >
-            <label>
-              폴더 이름
-              <input
-                required
-                maxLength={120}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </label>
-            <label>
-              상위 폴더
-              <select
-                value={parent}
-                onChange={(e) => setParent(e.target.value)}
-              >
-                <option value="">최상위</option>
-                {folders
-                  .filter((f) => f.role === "owner")
-                  .map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <button disabled={busy}>폴더 만들기</button>
-          </form>
-        </details>
-        <ReceivePairing
-          api={api}
-          onConnected={async (id) => {
-            await refresh();
-            await select(id);
-          }}
-        />
+            <ArrowLeft size={18} /> 내 폴더
+          </button>
+        ) : (
+          <h2>
+            내 폴더 <span>{folders.length}</span>
+          </h2>
+        )}
       </div>
-      <div className="folder-columns">
-        <nav aria-label="프로젝트 폴더 목록">
-          <input
-            aria-label="폴더 찾기"
-            placeholder="폴더 찾기"
-            value={folderSearch}
-            onChange={(e) => setFolderSearch(e.target.value)}
-          />
-          {folders.length === 0 && (
-            <p>기억 파일이나 폴더를 가져와 시작하세요.</p>
-          )}
-          {[...folders]
-            .filter((f) =>
-              folderPath(f)
-                .toLocaleLowerCase()
-                .includes(folderSearch.toLocaleLowerCase()),
-            )
-            .sort((a, b) => folderPath(a).localeCompare(folderPath(b), "ko"))
-            .map((f) => (
-              <div className="folder-card" key={f.id}>
-                <button
-                  disabled={busy}
-                  aria-pressed={selected?.id === f.id}
-                  onClick={() => void run(() => select(f.id))}
-                >
-                  {folderPath(f)} ·{" "}
-                  {f.role === "owner"
-                    ? "내 폴더"
-                    : f.role === "editor"
-                      ? "공유 · 편집"
-                      : "공유 · 읽기"}
-                </button>
-                <small>
-                  기억 {f.entry_count || 0}개 ·{" "}
-                  {f.role === "owner"
-                    ? f.member_count
-                      ? `${f.member_count}명과 공유 중`
-                      : "비공개"
-                    : "공유받음"}
-                </small>
-                {f.role === "owner" && (
-                  <button
-                    className="folder-share-link"
-                    aria-label={`${f.name} 공유 설정`}
-                    disabled={busy}
-                    onClick={() => void run(() => select(f.id, true))}
+      {error && <p role="alert">{error}</p>}
+      {notice && <p role="status">{notice}</p>}
+      {!selected && (
+        <div className="drive-actions">
+          <details className="drive-import">
+            <summary>기억 가져오기</summary>
+            <ImportPanel
+              api={api}
+              folders={folders}
+              onImported={async () => {
+                await refresh();
+                setEntryKey((k) => k + 1);
+              }}
+            />
+          </details>
+          <div className="folder-tools">
+            <details>
+              <summary>새 폴더</summary>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void run(async () => {
+                    const f = await api("/folders", {
+                      name,
+                      projectPath: "",
+                      parentId: parent || null,
+                    });
+                    setName("");
+                    await refresh();
+                    await select(f.id);
+                  });
+                }}
+              >
+                <label>
+                  폴더 이름
+                  <input
+                    required
+                    maxLength={120}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
+                <label>
+                  상위 폴더
+                  <select
+                    value={parent}
+                    onChange={(e) => setParent(e.target.value)}
                   >
-                    공유 설정
-                  </button>
-                )}
-              </div>
-            ))}
-        </nav>
+                    <option value="">최상위</option>
+                    {folders
+                      .filter((f) => f.role === "owner")
+                      .map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <button disabled={busy}>폴더 만들기</button>
+              </form>
+            </details>
+            <ReceivePairing
+              api={api}
+              onConnected={async (id) => {
+                await refresh();
+                await select(id);
+              }}
+            />
+          </div>
+        </div>
+      )}
+      <div className={selected ? "drive-detail" : "drive-library"}>
+        {!selected && (
+          <nav aria-label="프로젝트 폴더 목록">
+            <input
+              aria-label="폴더 찾기"
+              placeholder="폴더 찾기"
+              value={folderSearch}
+              onChange={(e) => setFolderSearch(e.target.value)}
+            />
+            {folders.length === 0 && (
+              <p>기억 파일이나 폴더를 가져와 시작하세요.</p>
+            )}
+            <div className="drive-grid">
+              {[...folders]
+                .filter((f) =>
+                  folderPath(f)
+                    .toLocaleLowerCase()
+                    .includes(folderSearch.toLocaleLowerCase()),
+                )
+                .sort((a, b) =>
+                  folderPath(a).localeCompare(folderPath(b), "ko"),
+                )
+                .map((f) => (
+                  <div
+                    className={`folder-card provider-${f.providers?.length === 2 ? "mixed" : f.providers?.[0] || "unknown"}`}
+                    key={f.id}
+                  >
+                    <button
+                      disabled={busy}
+                      className="drive-folder-open"
+                      aria-label={`${folderPath(f)} · ${f.role === "owner" ? "내 폴더" : f.role === "editor" ? "공유 · 편집" : "공유 · 읽기"}`}
+                      onClick={() => void run(() => select(f.id))}
+                    >
+                      <span
+                        className="provider-folder-icons"
+                        aria-hidden="true"
+                      >
+                        {f.providers?.length === 2 ? (
+                          <>
+                            <FolderIcon
+                              className="claude-folder-icon"
+                              size={23}
+                              fill="currentColor"
+                            />
+                            <FolderIcon
+                              className="codex-folder-icon"
+                              size={23}
+                              fill="currentColor"
+                            />
+                          </>
+                        ) : (
+                          <FolderIcon
+                            size={23}
+                            fill="currentColor"
+                            strokeWidth={1.5}
+                          />
+                        )}
+                      </span>
+                      <span className="drive-folder-title">
+                        {f.name}
+                        <small className="folder-provider-mark">
+                          {f.providers
+                            ?.map((p) => (p === "claude" ? "Claude" : "Codex"))
+                            .join(" + ")}
+                        </small>
+                      </span>
+                    </button>
+                    {f.role === "owner" && (
+                      <details className="drive-folder-menu">
+                        <summary aria-label={`${f.name} 옵션`}>
+                          <MoreVertical size={18} />
+                        </summary>
+                        <div>
+                          <button
+                            aria-label={`${f.name} 공유 설정`}
+                            disabled={busy}
+                            onClick={() => void run(() => select(f.id, true))}
+                          >
+                            공유
+                          </button>
+                          <button
+                            disabled={busy}
+                            onClick={() =>
+                              void run(() => select(f.id, false, true))
+                            }
+                          >
+                            이름 변경·관리
+                          </button>
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </nav>
+        )}
         {selected && (
           <article key={selected.id}>
             <h2>{selected.name}</h2>
@@ -296,7 +369,11 @@ export function Folders({
                 )}
               </form>
             </details>
-            <details>
+            <details
+              id="folder-options"
+              open={managing}
+              onToggle={(e) => setManaging(e.currentTarget.open)}
+            >
               <summary aria-label="폴더 옵션">••• 폴더 옵션</summary>
               {selected.role === "owner" && (
                 <>
@@ -392,15 +469,6 @@ export function Folders({
                 폴더 내보내기
               </button>
             </details>
-          </article>
-        )}
-        {!selected && folders.length > 0 && (
-          <article className="folder-empty">
-            <h2>폴더를 선택하세요</h2>
-            <p>
-              정리된 기억을 읽거나, 공유 설정에서 이 폴더를 다른 작업자와 연결할
-              수 있습니다.
-            </p>
           </article>
         )}
       </div>

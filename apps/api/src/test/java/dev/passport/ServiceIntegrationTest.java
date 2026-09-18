@@ -76,6 +76,28 @@ class ServiceIntegrationTest {
   }
 
   @Test
+  void folderProviderColorsUseVisibleSourcesWithoutExposingPaths() throws Exception {
+    var claude = new HashMap<String, Object>(item("claude-source"));
+    claude.put("source", "/private/.claude/projects/memory.md");
+    var codex = new HashMap<String, Object>(item("codex-source"));
+    codex.put("source", "C:/private/.codex/sessions/conversation.jsonl");
+    postJson(
+        "/api/folders/" + folder + "/import", Map.of("entries", List.of(claude, codex)), owner);
+    var response =
+        mvc.perform(get("/api/folders").session(owner))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertEquals(
+        json.readTree("[\"claude\",\"codex\"]"), json.readTree(response).get(0).path("providers"));
+    assertFalse(response.contains("/private/.claude"));
+    mvc.perform(get("/api/folders").session(guest))
+        .andExpect(status().isOk())
+        .andExpect(content().json("[]"));
+  }
+
+  @Test
   void importingOwnPendingMemoryRequiresNoSeparateReview() throws Exception {
     var imported =
         postJson(

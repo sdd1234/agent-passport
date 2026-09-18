@@ -2145,3 +2145,382 @@ td.mono {
     grid-template-columns: 1fr;
   }
 }
+/* Folder library and dated project activity. */
+.drive-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 22px;
+}
+.drive-heading h2 {
+  font-size: 24px;
+  font-weight: 550;
+  margin: 0;
+}
+.drive-heading h2 span {
+  font-size: 14px;
+  color: #7b8588;
+  margin-left: 8px;
+}
+.folder-workspace .drive-back {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #526462;
+  padding: 8px 0;
+}
+.drive-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.drive-actions .folder-tools {
+  display: contents;
+}
+.folder-workspace .drive-actions details {
+  background: white;
+  border: 1px solid #dbe1df;
+  border-radius: 10px;
+  padding: 0;
+  margin: 0;
+}
+.drive-actions details > summary {
+  padding: 10px 16px;
+  font-size: 13px;
+}
+.drive-actions details[open] {
+  flex-basis: 100%;
+  padding: 16px;
+}
+.drive-actions .import-panel {
+  border: 0;
+}
+.drive-library nav > input {
+  max-width: 340px;
+  margin-bottom: 20px;
+  background: white;
+}
+.drive-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.drive-grid .folder-card {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  background: #eef2f5;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  padding: 0;
+  min-height: 65px;
+  transition: background 0.15s;
+}
+.drive-grid .folder-card:hover {
+  background: #e3eaf0;
+  border-color: #d5dfe6;
+}
+.folder-workspace .drive-folder-open {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 20px 16px;
+  color: #3c4948;
+}
+.drive-folder-open svg {
+  flex-shrink: 0;
+}
+.drive-folder-open span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 550;
+}
+.drive-grid .folder-card .folder-share-link {
+  border: 0;
+  background: transparent;
+  padding: 12px 8px;
+  margin: 0 5px 0 0;
+  color: #51615f;
+}
+.drive-detail {
+  max-width: 1050px;
+  margin: 0 auto;
+}
+.drive-detail > article > h2 {
+  font-size: 28px;
+  margin: 8px 0 22px;
+}
+.drive-detail .folder-entries {
+  border: 0;
+  padding-top: 0;
+}
+.timeline-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 0;
+}
+.timeline-toolbar h3 {
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+.timeline-toolbar p {
+  font-size: 13px;
+  color: #75817f;
+  margin: 0;
+}
+.timeline-toolbar button {
+  white-space: nowrap;
+  background: white;
+  font-size: 12px;
+}
+.folder-workspace .timeline-day {
+  border: 1px solid #e0e6e4;
+  border-radius: 14px;
+  background: white;
+  padding: 0;
+  margin: 0 0 16px;
+  overflow: hidden;
+}
+.timeline-day > summary {
+  display: grid;
+  grid-template-columns: 155px minmax(0, 1fr);
+  gap: 24px;
+  padding: 24px;
+  list-style: none;
+}
+.timeline-day > summary::-webkit-details-marker {
+  display: none;
+}
+.timeline-day > summary:hover {
+  background: #f7faf9;
+}
+.timeline-date {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.timeline-date time {
+  font-size: 17px;
+  font-weight: 650;
+  color: #334c45;
+}
+.timeline-date > span {
+  font-size: 11px;
+  color: #84908b;
+}
+.timeline-preview p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 12px;
+  color: #374942;
+  overflow-wrap: anywhere;
+}
+.timeline-preview > small {
+  font-size: 12px;
+  color: #638a7c;
+}
+.timeline-badge {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 11px;
+  background: #ecf3ef;
+  color: #3b6e56;
+  padding: 2px 7px;
+  border-radius: 5px;
+  margin-right: 9px;
+  vertical-align: 1px;
+}
+.timeline-badge.next {
+  background: #eef1fc;
+  color: #596bab;
+}
+.timeline-badge.request {
+  background: #fff4e6;
+  color: #936b32;
+}
+.timeline-badge.decision {
+  background: #f0ecfa;
+  color: #7954a2;
+}
+.timeline-detail {
+  padding: 0 24px 24px 203px;
+  border-top: 1px solid #edf1ef;
+}
+.timeline-note {
+  font-size: 12px;
+  color: #8a9590;
+  line-height: 1.7;
+  margin: 18px 0;
+}
+.timeline-event {
+  border-left: 2px solid #e5ebe8;
+  padding: 4px 0 8px 16px;
+  margin: 20px 0;
+}
+.timeline-event > p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.timeline-event > small {
+  font-size: 11px;
+  color: #8a9590;
+}
+.folder-workspace .timeline-source {
+  display: block;
+  border: 0;
+  background: transparent;
+  color: #648777;
+  padding: 5px 0;
+  font-size: 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.timeline-empty {
+  padding: 45px 20px;
+  text-align: center;
+  color: #8a9590;
+  background: #f5f8f6;
+  border-radius: 14px;
+}
+@media (max-width: 1050px) {
+  .drive-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .drive-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .timeline-day > summary {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 18px;
+  }
+  .timeline-date {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .timeline-detail {
+    padding: 0 18px 18px;
+  }
+  .timeline-toolbar {
+    align-items: flex-start;
+  }
+  .timeline-toolbar p {
+    max-width: 230px;
+  }
+}
+.folder-workspace .drive-folder-menu {
+  position: relative;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0 8px 0 0;
+}
+.drive-folder-menu > summary {
+  display: flex;
+  list-style: none;
+  padding: 10px 2px;
+  color: #526462;
+}
+.drive-folder-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.drive-folder-menu > div {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 3;
+  min-width: 150px;
+  padding: 6px;
+  background: white;
+  border: 1px solid #dce4df;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px #1e34281a;
+}
+.folder-workspace .drive-folder-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: white;
+  font-size: 13px;
+}
+.folder-workspace .drive-folder-menu button:hover {
+  background: #f1f5f3;
+}
+.drive-grid .folder-card.provider-claude {
+  background: #f8ece5;
+}
+.drive-grid .folder-card.provider-claude:hover {
+  background: #f0ded2;
+  border-color: #ddae96;
+}
+.provider-claude .provider-folder-icons {
+  color: #c46b4c;
+}
+.drive-grid .folder-card.provider-codex {
+  background: #e8ebed;
+}
+.drive-grid .folder-card.provider-codex:hover {
+  background: #dce1e5;
+  border-color: #a7b1b8;
+}
+.provider-codex .provider-folder-icons {
+  color: #20272c;
+}
+.drive-grid .folder-card.provider-mixed {
+  background: linear-gradient(110deg, #f6e7dd, #e6eaed);
+}
+.drive-grid .folder-card.provider-mixed:hover {
+  border-color: #bdafa5;
+}
+.provider-folder-icons {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  overflow: visible !important;
+}
+.provider-folder-icons .claude-folder-icon {
+  color: #c46b4c;
+}
+.provider-folder-icons .codex-folder-icon {
+  color: #20272c;
+  margin-left: -11px;
+  transform: translateY(5px);
+  filter: drop-shadow(-2px -2px 0 #f2eae3);
+}
+.drive-folder-open .drive-folder-title {
+  display: block;
+}
+.folder-workspace .folder-provider-mark {
+  display: block;
+  color: #77817e;
+  font-size: 10px;
+  margin-top: 4px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+.provider-claude .folder-provider-mark {
+  color: #a75e43;
+}
+.provider-codex .folder-provider-mark {
+  color: #4a555b;
+}

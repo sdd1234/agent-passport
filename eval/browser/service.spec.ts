@@ -8,6 +8,8 @@ test("two accounts auto-organize, share and revoke project context", async ({
     guest = await b.newPage();
   try {
     const suffix = Date.now().toString();
+    const conversation =
+      "# 2026-05-20\nChoose PostgreSQL\n# 2026-05-21\n로그인 화면을 구현하고 테스트를 통과했습니다.";
     for (const [page, name] of [
       [owner, "owner" + suffix],
       [guest, "guest" + suffix],
@@ -31,6 +33,7 @@ test("two accounts auto-organize, share and revoke project context", async ({
         page.getByRole("heading", { name: "프로젝트 · 인수인계." }),
       ).toBeVisible();
     }
+    await owner.locator(".drive-import > summary").click();
     await owner.getByLabel("가져오기 파일").setInputFiles({
       name: "passport-import.json",
       mimeType: "application/json",
@@ -40,7 +43,7 @@ test("two accounts auto-organize, share and revoke project context", async ({
           entries: [
             {
               title: "Imported decision",
-              content: "Choose PostgreSQL",
+              content: conversation,
               source: "fixture.md",
               kind: "decision",
               projectName: "Shared project",
@@ -60,9 +63,9 @@ test("two accounts auto-organize, share and revoke project context", async ({
       .getByRole("button", { name: "Shared project · 내 폴더", exact: true })
       .click();
     await expect(
-      owner.getByRole("heading", { name: "프로젝트 한눈에 보기" }),
+      owner.getByRole("heading", { name: "작업 타임라인" }),
     ).toBeVisible();
-    await expect(owner.locator(".overview-decision")).toContainText(
+    await expect(owner.locator(".project-timeline")).toContainText(
       "Choose PostgreSQL",
     );
     await expect(owner.getByText("새 기억 작성", { exact: true })).toHaveCount(
@@ -74,6 +77,16 @@ test("two accounts auto-organize, share and revoke project context", async ({
     await expect(
       owner.getByText("고급 설정 · Codex · Claude 자동 연결", { exact: true }),
     ).toHaveCount(0);
+    await expect(owner.locator(".timeline-date time")).toHaveText([
+      "2026. 05. 20",
+      "2026. 05. 21",
+    ]);
+    await expect(owner.locator(".timeline-detail")).toHaveCount(0);
+    await owner.getByRole("button", { name: "시간순 ↑", exact: true }).click();
+    await expect(owner.locator(".timeline-date time")).toHaveText([
+      "2026. 05. 21",
+      "2026. 05. 20",
+    ]);
     await owner.getByText("원문 1개 보기", { exact: true }).click();
     await expect(
       owner.getByRole("button", {
@@ -119,8 +132,10 @@ test("two accounts auto-organize, share and revoke project context", async ({
     await expect(
       guest.getByLabel("인수인계 문서", { exact: true }),
     ).toBeDisabled();
+    await guest.locator(".timeline-day > summary").first().click();
     await guest
-      .getByRole("button", { name: "출처 · Imported decision", exact: true })
+      .getByRole("button", { name: "원문 · Imported decision", exact: true })
+      .first()
       .click();
     await guest
       .getByRole("button", {
@@ -129,9 +144,10 @@ test("two accounts auto-organize, share and revoke project context", async ({
       })
       .click();
     await expect(guest.getByLabel("기억 내용", { exact: true })).toHaveValue(
-      "Choose PostgreSQL",
+      conversation,
     );
     // Reload owner member list, then revoke and verify server denies subsequent guest reads.
+    await owner.getByRole("button", { name: "내 폴더", exact: true }).click();
     await owner
       .getByRole("button", { name: "Shared project · 내 폴더", exact: true })
       .click();

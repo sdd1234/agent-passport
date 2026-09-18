@@ -26,4 +26,23 @@ test("project folder handoff survives reload", async ({ page }) => {
   await expect(page.getByLabel("인수인계 문서", { exact: true })).toHaveValue(
     "진행: 폴더 API 완료\n다음: 기억 가져오기",
   );
+  await page.getByLabel("폴더 옵션", { exact: true }).click();
+  await page.getByLabel("이름", { exact: true }).fill(name + " renamed");
+  await page.getByRole("button", { name: "이름 저장", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: name + " renamed", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "내 폴더", exact: true }).click();
+  await expect(page.locator(".drive-grid")).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: name + " renamed · 내 폴더",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByLabel(name + " renamed 옵션", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "이름 변경·관리", exact: true })
+    .click();
+  await expect(page.getByLabel("이름", { exact: true })).toBeVisible();
 });

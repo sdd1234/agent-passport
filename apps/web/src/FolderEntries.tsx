@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { buildOverview } from "./lib/overview.mjs";
+import React, { useEffect, useState } from "react";
+import { ProjectTimeline } from "./ProjectTimeline";
 import type { ApiCall } from "./Account";
 export function FolderEntries({
   api,
@@ -21,10 +21,6 @@ export function FolderEntries({
     [target, setTarget] = useState(""),
     [allEntries, setAllEntries] = useState<any[]>([]),
     [originals, setOriginals] = useState(false);
-  const overview = useMemo(() => buildOverview(allEntries), [allEntries]);
-  const [visibleRecords, setVisibleRecords] = useState<Record<string, number>>(
-    {},
-  );
   const prefix = `/folders/${folder.id}`;
   const editable = folder.role !== "viewer";
   async function refresh(start = offset) {
@@ -65,122 +61,30 @@ export function FolderEntries({
   }
   return (
     <section className="folder-entries">
-      <h3>프로젝트 한눈에 보기</h3>
-      <p className="overview-caption">
-        저장된 원문에서 모은 핵심 기록입니다. 출처를 눌러 전체 맥락을
-        확인하세요.
-      </p>
       {busy && <p role="status">기록을 불러오는 중…</p>}
-      {folder.handoff && (
-        <div className="handoff-summary">
-          <h4>인수인계 메모</h4>
-          <p>{folder.handoff}</p>
-        </div>
-      )}
-      <div className="overview-grid">
-        {(
-          [
-            ["goal", "목표와 배경"],
-            ["decision", "결정 사항"],
-            ["progress", "진행 기록"],
-            ["next", "다음 작업"],
-          ] as const
-        ).map(([key, label], index) => (
-          <section className={`overview-card overview-${key}`} key={key}>
-            <h4>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              {label}
-            </h4>
-            {!overview[key].length && (
-              <p className="overview-empty">
-                원문에 명시된 기록이 아직 없습니다.
-              </p>
-            )}
-            {overview[key].slice(0, 4).map((item, i) => (
-              <div className="overview-item" key={i}>
-                {item.date && <time>{item.date}</time>}
-                <p>{item.text}</p>
-                <button
-                  className="source-link"
-                  onClick={() => {
-                    setSelected({
-                      ...allEntries.find((e) => e.id === item.entryId),
-                    });
-                    setHistory([]);
-                    setOriginals(true);
-                    requestAnimationFrame(() =>
-                      document
-                        .getElementById("folder-originals")
-                        ?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        }),
-                    );
-                  }}
-                >
-                  출처 · {item.title}
-                </button>
-              </div>
-            ))}
-            {overview[key].length > 4 && (
-              <details
-                onToggle={(e) => {
-                  if (e.currentTarget.open && !visibleRecords[key])
-                    setVisibleRecords((v) => ({ ...v, [key]: 54 }));
-                }}
-              >
-                <summary>기록 {overview[key].length - 4}개 더 보기</summary>
-                {overview[key]
-                  .slice(4, visibleRecords[key] || 4)
-                  .map((item, i) => (
-                    <div className="overview-item" key={i}>
-                      <p>
-                        {item.date && <time>{item.date} · </time>}
-                        {item.text}
-                      </p>
-                      <button
-                        className="source-link"
-                        onClick={() => {
-                          setSelected({
-                            ...allEntries.find((e) => e.id === item.entryId),
-                          });
-                          setHistory([]);
-                          setOriginals(true);
-                          requestAnimationFrame(() =>
-                            document
-                              .getElementById("folder-originals")
-                              ?.scrollIntoView({ behavior: "smooth" }),
-                          );
-                        }}
-                      >
-                        출처 · {item.title}
-                      </button>
-                    </div>
-                  ))}
-                {(visibleRecords[key] || 4) < overview[key].length && (
-                  <button
-                    onClick={() =>
-                      setVisibleRecords((v) => ({
-                        ...v,
-                        [key]: (v[key] || 4) + 50,
-                      }))
-                    }
-                  >
-                    기록 50개 더 보기
-                  </button>
-                )}
-              </details>
-            )}
-          </section>
-        ))}
-      </div>
+      {error && <p role="alert">{error}</p>}
+      <ProjectTimeline
+        entries={allEntries}
+        onSource={(id) => {
+          const entry = allEntries.find((e) => e.id === id);
+          if (!entry) return;
+          setSelected({ ...entry });
+          setHistory([]);
+          setOriginals(true);
+          requestAnimationFrame(() =>
+            document
+              .getElementById("folder-originals")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+          );
+        }}
+      />
       <details
         id="folder-originals"
         open={originals}
         onToggle={(e) => setOriginals(e.currentTarget.open)}
       >
         <summary>원문 {allEntries.length}개 보기</summary>
-        {error && <p role="alert">{error}</p>}
+
         <form
           onSubmit={(e) => {
             e.preventDefault();

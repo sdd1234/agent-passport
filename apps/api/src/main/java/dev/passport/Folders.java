@@ -76,6 +76,26 @@ public class Folders {
   @GetMapping
   Object list(HttpServletRequest r) {
     String user = auth.user(r);
+    Map<String, Set<String>> providers = new HashMap<>();
+    for (var entry :
+        db.queryForList(
+            "SELECT e.folder_id, e.source FROM folder_entries e JOIN workspace_folders f ON"
+                + " f.id=e.folder_id WHERE f.owner_id=? OR EXISTS (SELECT 1 FROM folder_members m"
+                + " WHERE m.folder_id=f.id AND m.user_id=?)",
+            user,
+            user)) {
+      String source =
+          crypto
+              .decrypt(entry.get("source").toString())
+              .replace('\\', '/')
+              .toLowerCase(Locale.ROOT);
+      String provider =
+          source.contains("/.claude/") ? "claude" : source.contains("/.codex/") ? "codex" : "";
+      if (!provider.isEmpty())
+        providers
+            .computeIfAbsent(entry.get("folder_id").toString(), ignored -> new TreeSet<>())
+            .add(provider);
+    }
     return db
         .queryForList(
             "SELECT f.*, (SELECT COUNT(*) FROM folder_entries e WHERE e.folder_id=f.id) AS"
@@ -88,7 +108,11 @@ public class Folders {
             user,
             user)
         .stream()
-        .map(this::readable)
+        .map(
+            f -> {
+              f.put("providers", providers.getOrDefault(f.get("id").toString(), Set.of()));
+              return readable(f);
+            })
         .toList();
   }
 
