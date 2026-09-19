@@ -19,6 +19,7 @@ public class Entries {
   final Plans plans;
   final ObjectMapper json;
   final MemoryService memories;
+  final HistoryStore changes;
 
   public Entries(
       Folders folders,
@@ -27,7 +28,9 @@ public class Entries {
       Auth auth,
       Plans plans,
       ObjectMapper json,
-      MemoryService memories) {
+      MemoryService memories,
+      HistoryStore changes) {
+    this.changes = changes;
     this.folders = folders;
     this.db = db;
     this.crypto = crypto;
@@ -59,6 +62,7 @@ public class Entries {
     var f = folders.access(auth.user(r), folder, edit, false);
     String owner = f.get("owner_id").toString();
     plans.lock(owner);
+    folders.access(auth.user(r), folder, edit, false);
     return owner;
   }
 
@@ -78,13 +82,16 @@ public class Entries {
 
   void history(String id, String title, String content, int revision, String user) {
     db.update(
-        "INSERT INTO folder_entry_versions VALUES(?,?,?,?,?,?)",
+        "INSERT INTO"
+            + " folder_entry_versions(entry_id,revision,content,title,created_by,updated_at,folder_id)"
+            + " VALUES(?,?,?,?,?,?,?)",
         id,
         revision,
         crypto.encrypt(content),
         title,
         user,
-        System.currentTimeMillis());
+        System.currentTimeMillis(),
+        db.queryForObject("SELECT folder_id FROM folder_entries WHERE id=?", String.class, id));
   }
 
   String insert(String folder, Entry b, String user, String state) {
@@ -120,6 +127,7 @@ public class Entries {
         user,
         System.currentTimeMillis());
     history(id, b.title(), b.content(), 1, user);
+    changes.record(folder, "entry", id, "CREATE", user, null);
     return id;
   }
 
@@ -189,6 +197,7 @@ public class Entries {
                 entryId,
                 revision)
             != 1) throw Auth.error(409, "ENTRY_VERSION_CONFLICT");
+        changes.record(id, "entry", entryId, "REVIEW", auth.user(r), stored);
         history(
             entryId,
             stored.get("title").toString(),
@@ -228,6 +237,7 @@ public class Entries {
         crypto.decrypt(e.get("content").toString()),
         b.revision() + 1,
         auth.user(r));
+    changes.record(id, "entry", entryId, "REVIEW", auth.user(r), e);
     plans.enforce(owner);
     return Map.of("ok", true);
   }
@@ -241,7 +251,7 @@ public class Entries {
       @Valid @RequestBody Edit b) {
     auth.origin(r);
     String owner = owner(r, id, true);
-    entry(id, entryId);
+    var before = entry(id, entryId);
     if (db.update(
             "UPDATE folder_entries SET title=?,content=?,revision=revision+1,bytes=?,updated_at=?"
                 + " WHERE id=? AND revision=?",
@@ -253,6 +263,7 @@ public class Entries {
             b.revision())
         != 1) throw Auth.error(409, "ENTRY_VERSION_CONFLICT");
     history(entryId, b.title(), b.content(), b.revision() + 1, auth.user(r));
+    changes.record(id, "entry", entryId, "EDIT", auth.user(r), before);
     plans.enforce(owner);
     return Map.of("ok", true);
   }
@@ -263,7 +274,12 @@ public class Entries {
     entry(id, entryId);
     return db
         .queryForList(
-            "SELECT * FROM folder_entry_versions WHERE entry_id=? ORDER BY revision DESC", entryId)
+            "SELECT * FROM folder_entry_versions WHERE entry_id=? AND (folder_id=? OR ?=?) ORDER BY"
+                + " revision DESC",
+            entryId,
+            id,
+            f.get("owner_id"),
+            auth.user(r))
         .stream()
         .map(v -> readable(v, false))
         .toList();
@@ -281,7 +297,7 @@ public class Entries {
     folders.access(user, id, true, true);
     folders.access(user, b.folderId(), true, true);
     plans.lock(user);
-    entry(id, entryId);
+    var before = entry(id, entryId);
     if (db.update(
             "UPDATE folder_entries SET folder_id=?,revision=revision+1,updated_at=? WHERE id=? AND"
                 + " revision=?",
@@ -290,6 +306,15 @@ public class Entries {
             entryId,
             b.revision())
         != 1) throw Auth.error(409, "ENTRY_VERSION_CONFLICT");
+    history(
+        entryId,
+        before.get("title").toString(),
+        crypto.decrypt(before.get("content").toString()),
+        b.revision() + 1,
+        user);
+    changes.record(id, "entry", entryId, "MOVE", user, before);
+    changes.record(b.folderId(), "entry", entryId, "MOVE", user, before);
+    plans.enforce(user);
     return Map.of("ok", true);
   }
 
@@ -301,12 +326,15 @@ public class Entries {
       @PathVariable String entryId,
       @RequestParam int revision) {
     auth.origin(r);
-    owner(r, id, true);
+    String owner = owner(r, id, true);
     var e = entry(id, entryId);
+    var before = changes.archive("entry", entryId);
     if (((Number) e.get("revision")).intValue() != revision)
       throw Auth.error(409, "ENTRY_VERSION_CONFLICT");
     db.update("DELETE FROM folder_entry_versions WHERE entry_id=?", entryId);
     db.update("DELETE FROM folder_entries WHERE id=?", entryId);
+    changes.record(id, "entry", entryId, "DELETE", auth.user(r), before);
+    plans.enforce(owner);
     return Map.of("ok", true);
   }
 
@@ -333,15 +361,25 @@ public class Entries {
   }
 
   @GetMapping("/{id}/export")
-  Object export(HttpServletRequest r, @PathVariable String id) {
+  Object export(
+      HttpServletRequest r,
+      @PathVariable String id,
+      @RequestParam(defaultValue = "false") boolean share) {
     String user = auth.user(r);
     var f = folders.access(user, id, false, false);
-    boolean owner = user.equals(f.get("owner_id"));
+    boolean owner = user.equals(f.get("owner_id")) && !share;
+    if (share) {
+      f.put("project_path", "");
+      f.put("parent_id", null);
+      f.put("role", "viewer");
+    }
     return Map.of(
         "schemaVersion",
         1,
         "folder",
         folders.readable(f),
+        "history",
+        share ? List.of() : changes.export(id, owner),
         "tasks",
         Collaboration.readTasks(db, crypto, id),
         "taskEvents",
@@ -350,7 +388,20 @@ public class Entries {
         db
             .queryForList("SELECT * FROM folder_entries WHERE folder_id=? ORDER BY updated_at", id)
             .stream()
-            .map(e -> readable(e, owner))
+            .map(
+                e -> {
+                  String source = crypto.decrypt(e.get("source").toString());
+                  var row = readable(e, owner);
+                  if (share)
+                    row.put(
+                        "source",
+                        source.contains("/.claude/")
+                            ? "passport-export:/.claude/"
+                            : source.contains("/.codex/")
+                                ? "passport-export:/.codex/"
+                                : "passport-export");
+                  return row;
+                })
             .toList());
   }
 

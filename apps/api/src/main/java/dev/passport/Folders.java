@@ -18,8 +18,16 @@ public class Folders {
   final Crypto crypto;
   final Plans plans;
   final MemoryService memories;
+  final HistoryStore history;
 
-  public Folders(JdbcTemplate db, Auth auth, Crypto crypto, Plans plans, MemoryService memories) {
+  public Folders(
+      JdbcTemplate db,
+      Auth auth,
+      Crypto crypto,
+      Plans plans,
+      MemoryService memories,
+      HistoryStore history) {
+    this.history = history;
     this.db = db;
     this.auth = auth;
     this.crypto = crypto;
@@ -150,6 +158,7 @@ public class Folders {
           > 0) throw Auth.error(409, "PROJECT_PATH_ALREADY_BOUND");
       db.update("INSERT INTO project_bindings VALUES(?,?,?)", user, path, id);
     }
+    history.record(id, "folder", id, "CREATE", user, null);
     plans.enforce(user);
     return get(r, id);
   }
@@ -160,6 +169,8 @@ public class Folders {
     auth.origin(r);
     var f = access(auth.user(r), id, true, false);
     plans.lock(f.get("owner_id").toString());
+    f = access(auth.user(r), id, true, false);
+    var before = history.snapshot("folder", id);
     String path =
         "owner".equals(f.get("role")) ? b.projectPath() : f.get("project_path").toString();
     int updated =
@@ -197,6 +208,7 @@ public class Folders {
             normalizePath(previous));
     }
 
+    history.record(id, "folder", id, "EDIT", auth.user(r), before);
     plans.enforce(f.get("owner_id").toString());
     memories.audit(f.get("owner_id").toString(), auth.user(r), "FOLDER_EDIT", id, "ALLOW", null);
     return get(r, id);
@@ -205,7 +217,10 @@ public class Folders {
   @GetMapping("/{id}/members")
   Object members(HttpServletRequest r, @PathVariable String id) {
     access(auth.user(r), id, false, true);
-    return db.queryForList("SELECT user_id,role FROM folder_members WHERE folder_id=?", id);
+    return db.queryForList(
+        "SELECT m.user_id,m.role,COALESCE(a.username, m.user_id) AS username FROM folder_members m"
+            + " LEFT JOIN accounts a ON a.user_id=m.user_id WHERE m.folder_id=?",
+        id);
   }
 
   @PostMapping("/{id}/members")
@@ -270,6 +285,7 @@ public class Folders {
     String user = auth.user(r);
     access(user, id, true, true);
     plans.lock(user);
+    var before = history.snapshot("folder", id);
     String cursor = b.parentId();
     Set<String> visited = new HashSet<>();
     while (cursor != null) {
@@ -285,6 +301,8 @@ public class Folders {
             id,
             b.revision())
         != 1) throw Auth.error(409, "FOLDER_VERSION_CONFLICT");
+    history.record(id, "folder", id, "MOVE", user, before);
+    plans.enforce(user);
     return get(r, id);
   }
 

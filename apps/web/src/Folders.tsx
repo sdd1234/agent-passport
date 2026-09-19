@@ -5,6 +5,7 @@ const WorkTerminal = lazy(() =>
   import("./WorkTerminal").then((m) => ({ default: m.WorkTerminal })),
 );
 import { CollaborationBoard } from "./CollaborationBoard";
+import { FolderHistory } from "./FolderHistory";
 import { FolderEntries } from "./FolderEntries";
 import { ReceivePairing, SendPairing } from "./Pairing";
 type Folder = {
@@ -19,7 +20,7 @@ type Folder = {
   member_count?: number;
   providers?: string[];
 };
-type Member = { user_id: string; role: string };
+type Member = { user_id: string; role: string; username?: string };
 export function Folders({
   api,
 }: {
@@ -291,6 +292,39 @@ export function Folders({
         {selected && (
           <article key={selected.id}>
             <h2>{selected.name}</h2>
+            <div className="folder-share-actions">
+              {selected.role === "owner" && (
+                <button onClick={() => setSharing((v) => !v)}>
+                  공유 · 권한 관리
+                </button>
+              )}
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const data = await api(
+                      `/folders/${selected.id}/export?share=true`,
+                    );
+                    const url = URL.createObjectURL(
+                      new Blob([JSON.stringify(data, null, 2)], {
+                        type: "application/json",
+                      }),
+                    );
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "passport-folder.json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  })
+                }
+              >
+                EXPORT · 사본 공유
+              </button>
+            </div>
+            <p className="share-copy-note">
+              EXPORT 파일은 ‘기억 가져오기’에서 비공개 사본으로 열 수 있습니다.
+              원본과 자동 동기화되지 않습니다.
+            </p>
             <Suspense fallback={<p>작업 도구 불러오는 중…</p>}>
               <WorkTerminal
                 key={selected.id}
@@ -310,7 +344,8 @@ export function Folders({
                 </summary>
                 <p>
                   이 폴더의 기억과 인수인계 내용만 공유합니다. 다른 폴더는
-                  비공개로 유지됩니다.
+                  비공개로 유지됩니다. 열람 전용은 내용을 수정할 수 없으며,
+                  편집·공동작업은 변경 이력을 남기며 함께 수정합니다.
                 </p>
                 <SendPairing
                   api={api}
@@ -322,7 +357,27 @@ export function Folders({
                 />
                 {members.map((m) => (
                   <p key={m.user_id}>
-                    {m.user_id} · {m.role === "editor" ? "편집" : "읽기"}{" "}
+                    {m.username || m.user_id}{" "}
+                    <select
+                      aria-label={`${m.username || m.user_id} 공유 권한`}
+                      value={m.role}
+                      disabled={busy}
+                      onChange={(e) => {
+                        const role = e.target.value;
+                        void run(async () => {
+                          await api(`/folders/${selected.id}/members`, {
+                            userId: m.user_id,
+                            role,
+                          });
+                          setMembers(
+                            await api(`/folders/${selected.id}/members`),
+                          );
+                        });
+                      }}
+                    >
+                      <option value="viewer">열람 전용</option>
+                      <option value="editor">편집 · 공동작업</option>
+                    </select>{" "}
                     <button
                       disabled={busy}
                       onClick={() =>
@@ -345,8 +400,19 @@ export function Folders({
                 ))}
               </details>
             )}
+            <FolderHistory
+              api={api}
+              folder={selected}
+              onRestored={async () => {
+                await refresh();
+                const latest = await api(`/folders/${selected.id}`);
+                setSelected(latest);
+                setMoveParent(latest.parent_id || "");
+                setEntryKey((k) => k + 1);
+              }}
+            />
             <CollaborationBoard
-              key={selected.id + ":collaboration"}
+              key={selected.id + ":collaboration:" + entryKey}
               api={api}
               folder={selected}
             />
@@ -391,6 +457,27 @@ export function Folders({
               onToggle={(e) => setManaging(e.currentTarget.open)}
             >
               <summary aria-label="폴더 옵션">••• 폴더 옵션</summary>
+              {selected.role === "editor" && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void run(save);
+                  }}
+                >
+                  <label>
+                    폴더 이름 변경
+                    <input
+                      value={selected.name}
+                      required
+                      maxLength={120}
+                      onChange={(e) =>
+                        setSelected({ ...selected, name: e.target.value })
+                      }
+                    />
+                  </label>
+                  <button disabled={busy}>이름 저장</button>
+                </form>
+              )}
               {selected.role === "owner" && (
                 <>
                   <form
@@ -448,7 +535,11 @@ export function Folders({
                   <button
                     disabled={busy}
                     onClick={() => {
-                      if (window.confirm("폴더와 모든 기억·공유를 삭제할까요?"))
+                      if (
+                        window.confirm(
+                          "폴더와 모든 기억·공유·변경 이력을 영구 삭제할까요? 이 작업은 복원할 수 없습니다.",
+                        )
+                      )
                         void run(async () => {
                           await api(
                             `/folders/${selected.id}?revision=${selected.revision}`,
@@ -464,26 +555,6 @@ export function Folders({
                   </button>
                 </>
               )}
-              <button
-                disabled={busy}
-                onClick={() =>
-                  void run(async () => {
-                    const data = await api(`/folders/${selected.id}/export`);
-                    const url = URL.createObjectURL(
-                      new Blob([JSON.stringify(data, null, 2)], {
-                        type: "application/json",
-                      }),
-                    );
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "passport-folder.json";
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  })
-                }
-              >
-                폴더 내보내기
-              </button>
             </details>
           </article>
         )}

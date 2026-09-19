@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-09-18T17:12:14.235Z",
+  "checkedAt": "2026-09-19T13:12:47.061Z",
   "postgres": "16",
   "mode": "service",
   "checks": [
@@ -15,11 +15,12 @@
     "account deletion"
   ],
   "backupRestore": false,
-  "realCollaboration": true,
+  "realCollaboration": false,
   "realFolderClients": false,
   "externalUnverified": [
     "public HTTPS deployment",
-    "live Stripe checkout and webhook delivery"
+    "live Stripe checkout and webhook delivery",
+    "real Codex/Claude invoking new folder tools"
   ],
   "logDirectory": ".data/service-verify-*"
 }

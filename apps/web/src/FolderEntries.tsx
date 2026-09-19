@@ -247,6 +247,34 @@ export function FolderEntries({
                   v{v.revision} · {new Date(v.updated_at).toLocaleString()}
                 </summary>
                 <pre>{v.content}</pre>
+                {editable && v.revision !== selected.revision && (
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      if (
+                        !confirm(
+                          `v${v.revision} 내용으로 복원할까요? 현재 내용도 이력에 남습니다.`,
+                        )
+                      )
+                        return;
+                      void run(async () => {
+                        await mutate(
+                          `/entries/${selected.id}`,
+                          {
+                            title: v.title,
+                            content: v.content,
+                            revision: selected.revision,
+                          },
+                          "PATCH",
+                        );
+                        setSelected(null);
+                        setHistory([]);
+                      });
+                    }}
+                  >
+                    이 버전으로 복원
+                  </button>
+                )}
               </details>
             ))}
             {folder.role === "owner" && (
@@ -290,7 +318,11 @@ export function FolderEntries({
               <button
                 disabled={busy}
                 onClick={() => {
-                  if (window.confirm("이 기억과 버전 이력을 삭제할까요?"))
+                  if (
+                    window.confirm(
+                      "이 기억을 삭제할까요? 폴더의 변경 이력에서 복원할 수 있습니다.",
+                    )
+                  )
                     void run(async () => {
                       await mutate(
                         `/entries/${selected.id}?revision=${selected.revision}`,

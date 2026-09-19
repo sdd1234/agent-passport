@@ -16,8 +16,16 @@ public class Collaboration {
   final JdbcTemplate db;
   final Crypto crypto;
   final Plans plans;
+  final HistoryStore history;
 
-  public Collaboration(Folders folders, Auth auth, JdbcTemplate db, Crypto crypto, Plans plans) {
+  public Collaboration(
+      Folders folders,
+      Auth auth,
+      JdbcTemplate db,
+      Crypto crypto,
+      Plans plans,
+      HistoryStore history) {
+    this.history = history;
     this.plans = plans;
     this.folders = folders;
     this.auth = auth;
@@ -93,6 +101,14 @@ public class Collaboration {
         scope,
         crypto.encrypt(""),
         System.currentTimeMillis());
+    var who = auth.identity(r);
+    history.record(
+        folderId,
+        "task",
+        id,
+        "CREATE",
+        who.ownerSession() ? who.owner() : "agent:" + who.agent(),
+        null);
     plans.enforce(folders.identityAccess(r, folderId, true).get("owner_id").toString());
     return Map.of("id", id);
   }
@@ -184,6 +200,13 @@ public class Collaboration {
         status,
         progress,
         now);
+    history.record(
+        folderId,
+        "task",
+        id,
+        b.action().toUpperCase(Locale.ROOT),
+        who.ownerSession() ? who.owner() : "agent:" + who.agent(),
+        task);
     if (!b.action().equals("release"))
       plans.enforce(folders.identityAccess(r, folderId, true).get("owner_id").toString());
     return readTasks(db, crypto, folderId).stream()
@@ -216,11 +239,14 @@ public class Collaboration {
   Object remove(HttpServletRequest r, @PathVariable String folderId, @PathVariable String id) {
     auth.user(r);
     lock(r, folderId);
+    var before = history.archive("task", id);
     if (db.update(
             "DELETE FROM folder_tasks WHERE folder_id=? AND id=? AND status IN ('done','todo')",
             folderId,
             id)
         != 1) throw Auth.error(409, "RELEASE_TASK_FIRST");
+    history.record(folderId, "task", id, "DELETE", auth.user(r), before);
+    plans.enforce(folders.identityAccess(r, folderId, true).get("owner_id").toString());
     return Map.of("ok", true);
   }
 

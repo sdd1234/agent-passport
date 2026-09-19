@@ -89,6 +89,7 @@ export function ImportPanel({
   }
   async function load(files: FileList | null) {
     if (!files?.length) return;
+    const fileCount = files.length;
     setBusy(true);
     setError("");
     setNotice("파일 내용을 읽고 비슷한 기억을 묶고 있습니다.");
@@ -104,6 +105,16 @@ export function ImportPanel({
           const b = JSON.parse(text);
           if (b.schemaVersion !== 1 || !Array.isArray(b.entries))
             throw Error("지원하는 기억 내보내기 파일을 선택하세요.");
+          if (b.folder?.name) {
+            if (fileCount !== 1)
+              throw Error("공유 폴더 파일은 한 번에 하나씩 가져와 주세요.");
+            await api("/folders/import-copy", b);
+            setNotice(
+              `‘${b.folder.name}’ 폴더를 내 비공개 사본으로 가져왔습니다. 원본과 자동 동기화되지 않습니다.`,
+            );
+            await onImported();
+            return;
+          }
           raw.push(...b.entries);
         } else {
           const relative = file.webkitRelativePath || file.name;
@@ -175,6 +186,8 @@ export function ImportPanel({
     } catch (e) {
       setError((e as Error).message);
       setNotice("");
+      setBusy(false);
+    } finally {
       setBusy(false);
     }
   }

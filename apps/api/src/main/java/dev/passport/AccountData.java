@@ -44,7 +44,7 @@ public class AccountData {
         1,
         "folders",
         db.queryForList("SELECT id FROM workspace_folders WHERE owner_id=?", user).stream()
-            .map(f -> entries.export(r, f.get("id").toString()))
+            .map(f -> entries.export(r, f.get("id").toString(), false))
             .toList(),
         "memories",
         memories.list(user, null, null, null).stream()

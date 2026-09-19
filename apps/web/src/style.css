@@ -2615,3 +2615,71 @@ td.mono {
 .autosave-status small {
   color: #57695f;
 }
+.folder-share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.share-copy-note {
+  font-size: 12px;
+  color: #64756e;
+}
+.folder-history {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #d8e0d9;
+  border-radius: 12px;
+}
+.history-list {
+  list-style: none;
+  padding: 0;
+  max-height: 360px;
+  overflow: auto;
+}
+.history-list li {
+  margin: 6px 0;
+}
+.history-list button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+}
+.history-list span {
+  font-size: 12px;
+  color: #64756e;
+}
+.history-pages {
+  display: flex;
+  gap: 10px;
+}
+.history-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.history-comparison article {
+  min-width: 0;
+  padding: 12px;
+  background: #f4f6f3;
+  border-radius: 10px;
+}
+.history-comparison dd {
+  margin: 4px 0 16px;
+}
+.history-comparison pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 280px;
+  overflow: auto;
+  font: inherit;
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .history-comparison {
+    grid-template-columns: 1fr;
+  }
+}

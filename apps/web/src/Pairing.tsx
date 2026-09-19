@@ -155,8 +155,8 @@ export function SendPairing({
           onChange={(e) => setRole(e.target.value)}
           disabled={!!pair}
         >
-          <option value="viewer">읽기</option>
-          <option value="editor">편집</option>
+          <option value="viewer">열람 전용</option>
+          <option value="editor">편집 · 공동작업</option>
         </select>
       </label>
       {!pair && (

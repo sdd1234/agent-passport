@@ -102,6 +102,13 @@ public class Plans {
             owner);
     entries +=
         db.queryForObject("SELECT COUNT(*) FROM memories WHERE owner_id=?", Long.class, owner);
+    bytes +=
+        db.queryForObject(
+            "SELECT COALESCE(SUM(OCTET_LENGTH(h.before_state)+OCTET_LENGTH(h.after_state)),0) FROM"
+                + " folder_history h JOIN workspace_folders f ON h.folder_id=f.id WHERE"
+                + " f.owner_id=?",
+            Long.class,
+            owner);
     long shares =
         db.queryForObject(
             "SELECT COUNT(*) FROM folder_members m JOIN workspace_folders f ON m.folder_id=f.id"

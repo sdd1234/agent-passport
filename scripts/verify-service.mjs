@@ -117,7 +117,7 @@ try {
         "SELECT COUNT(*) FROM flyway_schema_history WHERE success=true",
       )
     ).rows[0].count,
-    "5",
+    "6",
   );
   const owner = {},
     guest = {};
@@ -154,6 +154,33 @@ try {
   await api(guest, `/folders/${folder.id}/binding`, {
     localPath: "/team/project",
   });
+  const originalEntry = (await api(owner, `/folders/${folder.id}/entries`))[0];
+  await api(
+    guest,
+    `/folders/${folder.id}/entries/${originalEntry.id}`,
+    {
+      title: "Collaborator edit",
+      content: "Synthetic changed context",
+      revision: originalEntry.revision,
+    },
+    "PATCH",
+  );
+  const changed = (await api(owner, `/folders/${folder.id}/history`)).find(
+    (e) => e.action === "EDIT" && e.entity_id === originalEntry.id,
+  );
+  const detail = await api(
+    owner,
+    `/folders/${folder.id}/history/${changed.id}`,
+  );
+  await api(owner, `/folders/${folder.id}/history/${changed.id}/restore`, {
+    side: "before",
+    expectedRevision: detail.expectedRevision,
+    expectedHead: detail.expectedHead,
+  });
+  assert.equal(
+    (await api(owner, `/folders/${folder.id}/entries`))[0].content,
+    originalEntry.content,
+  );
   const agent = await api(guest, "/agents", {
     provider: "mcp",
     name: "Service MCP",
@@ -272,6 +299,12 @@ try {
   // Restart proves both account session persistence and database-backed content.
   await stop();
   await start();
+  assert.ok(
+    (await api(owner, `/folders/${folder.id}/history`)).some(
+      (e) => e.action === "RESTORE",
+    ),
+  );
+
   assert.equal(
     (await api(owner, `/folders/${folder.id}/tasks`)).find(
       (t) => t.id === task.id,
@@ -400,7 +433,7 @@ try {
       .count,
     "0",
   );
-  for (const table of ["folder_tasks", "folder_task_events"])
+  for (const table of ["folder_tasks", "folder_task_events", "folder_history"])
     assert.equal(
       (await sql.query(`SELECT COUNT(*) FROM ${table}`)).rows[0].count,
       "0",
