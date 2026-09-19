@@ -112,7 +112,7 @@ test("local terminal: owner/origin checks, selected folder, single session, real
     assert.equal((await call()).status, 200);
     assert.equal(launches, 2);
   } finally {
-    terminal.stop();
+    await terminal.shutdown();
     await new Promise((r) => server.close(r));
     await new Promise((r) => api.close(r));
     await fs.rm(root, { recursive: true, force: true });

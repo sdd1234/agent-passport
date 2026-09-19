@@ -33,6 +33,9 @@ const args =
         "mcp_servers.agent-passport.required=true",
       ]
     : [
+        ...(process.env.PASSPORT_WORK_SESSION_ID
+          ? ["--session-id", process.env.PASSPORT_WORK_SESSION_ID]
+          : []),
         "--mcp-config",
         JSON.stringify({ mcpServers: { "agent-passport": server } }),
         "--",

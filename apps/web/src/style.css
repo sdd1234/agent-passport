@@ -2600,3 +2600,18 @@ td.mono {
     padding: 8px;
   }
 }
+.autosave-status {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #eef5ef;
+  border-radius: 10px;
+  color: #254536;
+  font-size: 13px;
+}
+.autosave-status span,
+.autosave-status small {
+  color: #57695f;
+}

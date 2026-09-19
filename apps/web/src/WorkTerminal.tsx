@@ -3,8 +3,18 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 
+type SaveStatus = {
+  state: string;
+  saved: number;
+  pending: number;
+  lastSavedAt: number;
+  code: string;
+  malformed: number;
+};
 type Api = (path: string, body?: unknown, method?: string) => Promise<any>;
 const messages: Record<string, string> = {
+  AUTOSAVE_PENDING:
+    "이전 작업 기록을 저장 중입니다. 저장이 완료되면 다시 시작하세요.",
   TERMINAL_ALREADY_RUNNING:
     "진행 중인 터미널이 있습니다. 작업을 종료한 뒤 다른 도구로 이어받으세요.",
   TERMINAL_NOT_CONFIGURED: "이 PC의 터미널 계정을 먼저 설정해야 합니다.",
@@ -25,6 +35,39 @@ export function WorkTerminal({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [status, setStatus] = useState("");
+  const [autosave, setAutosave] = useState<SaveStatus | null>(null);
+  const lastSaved = useRef(0);
+  const acceptSave = (value: SaveStatus) => {
+    setAutosave(value);
+    if (value.lastSavedAt > lastSaved.current) {
+      lastSaved.current = value.lastSavedAt;
+      window.dispatchEvent(
+        new CustomEvent("passport-memory-saved", { detail: { folderId } }),
+      );
+    }
+  };
+  useEffect(() => {
+    let cancelled = false,
+      loading = false;
+    const poll = async () => {
+      if (loading || document.hidden) return;
+      loading = true;
+      try {
+        const data = await api(`/local/work?folderId=${folderId}`);
+        if (!cancelled && data.autosave) acceptSave(data.autosave);
+      } catch {
+        /* Non-PC servers have no local collector. */
+      } finally {
+        loading = false;
+      }
+    };
+    void poll();
+    const timer = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [folderId]);
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!provider || !host.current) return;
@@ -55,6 +98,8 @@ export function WorkTerminal({
     };
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
+      if (m.type === "autosave" && m.folderId === folderId)
+        acceptSave(m.status);
       if (m.type === "output") term.write(m.data);
       if (m.type === "exit") {
         setStatus(
@@ -88,7 +133,8 @@ export function WorkTerminal({
     setOpen(true);
     setError("");
     try {
-      const s = await api("/local/work");
+      const s = await api(`/local/work?folderId=${folderId}`);
+      if (s.autosave) acceptSave(s.autosave);
       if (s.folderId === folderId) setProvider(s.provider);
       else if (s.folderId) setError(messages.TERMINAL_ALREADY_RUNNING);
     } catch (e) {
@@ -119,23 +165,55 @@ export function WorkTerminal({
       <button className="btn primary" onClick={show}>
         작업하기
       </button>
+      {autosave && (
+        <div className="autosave-status" role="status">
+          <strong>
+            {autosave.state === "error"
+              ? "자동 저장 확인 필요"
+              : autosave.state === "pending"
+                ? "자동 저장 재시도 중"
+                : autosave.state === "saved"
+                  ? `자동 저장 완료 · ${autosave.saved}개 기록`
+                  : autosave.state === "waiting"
+                    ? "대화 기록을 기다리는 중"
+                    : "대화 자동 저장 켜짐"}
+          </strong>
+          <span>
+            {autosave.state === "error"
+              ? autosave.code === "TRANSCRIPT_NOT_FOUND"
+                ? "CLI 대화 기록을 찾지 못했습니다. 이 세션은 아직 자동 저장되지 않았습니다."
+                : "서버 저장에 실패했습니다. 로컬 대기 기록을 유지하고 다시 시도합니다. 로그인·폴더 권한·저장 용량을 확인하세요."
+              : "작업하기로 시작한 대화를 이 폴더에 자동 저장합니다. 공유 폴더의 참여자도 읽을 수 있습니다."}
+          </span>
+          {autosave.lastSavedAt > 0 && (
+            <small>
+              마지막 저장{" "}
+              {new Date(autosave.lastSavedAt).toLocaleTimeString("ko-KR")}
+              {autosave.pending > 0 ? ` · ${autosave.pending}개 대기` : ""}
+            </small>
+          )}
+          {autosave.malformed > 0 && (
+            <small>
+              읽을 수 없는 기록 {autosave.malformed}줄이 있어 일부 내용은
+              저장되지 않았습니다.
+            </small>
+          )}
+        </div>
+      )}
       {open && (
         <div className="work-terminal-panel">
           <h3>이 폴더에서 작업 이어가기</h3>
           <p>
             Claude 또는 Codex가 폴더의 기억과 진행 상황을 읽고 실제 CLI에서
-            작업합니다. 다른 도구로 넘기기 전 인수인계 내용을 저장하고 작업을
-            종료하세요.
+            작업합니다. 대화는 자동 저장되어 날짜별 작업 타임라인에 정리됩니다.
+            작업을 종료한 뒤 다른 도구로 이어받을 수 있습니다.
           </p>
           {!provider && (
             <div className="actions">
-              <button
-                disabled={busy || !!error}
-                onClick={() => start("claude")}
-              >
+              <button disabled={busy} onClick={() => start("claude")}>
                 Claude로 작업
               </button>
-              <button disabled={busy || !!error} onClick={() => start("codex")}>
+              <button disabled={busy} onClick={() => start("codex")}>
                 Codex로 작업
               </button>
             </div>
@@ -155,12 +233,17 @@ export function WorkTerminal({
                 onClick={async () => {
                   if (
                     !confirm(
-                      "인수인계 내용을 저장했나요? 실행 중인 CLI를 종료합니다.",
+                      "실행 중인 CLI를 종료할까요? 마지막 대화도 자동 저장합니다.",
                     )
                   )
                     return;
                   try {
-                    await api("/local/work", undefined, "DELETE");
+                    const result = await api(
+                      `/local/work?folderId=${folderId}`,
+                      undefined,
+                      "DELETE",
+                    );
+                    if (result.autosave) acceptSave(result.autosave);
                     setProvider("");
                     setStatus("작업을 종료했습니다.");
                   } catch {

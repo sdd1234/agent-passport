@@ -55,6 +55,14 @@ export function FolderEntries({
   useEffect(() => {
     void run(() => refresh(0));
   }, [folder.id]);
+  useEffect(() => {
+    const saved = (event: Event) => {
+      if ((event as CustomEvent).detail?.folderId === folder.id)
+        void run(() => refresh());
+    };
+    window.addEventListener("passport-memory-saved", saved);
+    return () => window.removeEventListener("passport-memory-saved", saved);
+  }, [folder.id, query, offset]);
   async function mutate(path: string, body?: unknown, method?: string) {
     await api(prefix + path, body, method);
     await refresh();

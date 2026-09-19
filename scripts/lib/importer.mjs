@@ -6,6 +6,7 @@ import { createInterface } from "node:readline";
 const hash = (text) => crypto.createHash("sha256").update(text).digest("hex");
 export function redact(text) {
   return text
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [REDACTED TOKEN]")
     .replace(
       /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/g,
       "[REDACTED PRIVATE KEY]",
@@ -15,7 +16,7 @@ export function redact(text) {
       "[REDACTED TOKEN]",
     )
     .replace(
-      /\b((?:api[_-]?key|access[_-]?token|authorization|password|secret)\s*[:=]\s*)(["']?)[^\s,"'}]+/gi,
+      /\b((?:api[_-]?key|access[_-]?token|authorization|password|secret|token)\s*[:=]\s*)(["']?)[^\s,"'}]+/gi,
       "$1[REDACTED]",
     );
 }

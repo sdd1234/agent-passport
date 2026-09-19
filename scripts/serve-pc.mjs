@@ -84,7 +84,7 @@ const log = fs.openSync(path.join(dir, "api.log"), "a", 0o600);
 async function stop(code = 0) {
   if (stopping) return;
   stopping = true;
-  terminal?.stop();
+  await terminal?.shutdown();
   if (web) await new Promise((resolve) => web.close(resolve));
   if (api && api.exitCode === null) {
     const p = api;
@@ -178,7 +178,7 @@ try {
     apiPort: config.apiPort,
     owner: config.terminalOwner,
   });
-  process.once("exit", () => terminal.stop());
+
   web = http.createServer(async (req, res) => {
     // Keep browser cookies and the API's CSRF origin on one local address.
     if (
@@ -264,7 +264,9 @@ try {
     }
   });
   web.on("upgrade", terminal.upgrade);
-  web.on("close", terminal.stop);
+  web.on("close", () => {
+    void terminal.shutdown().catch(() => {});
+  });
   web.requestTimeout = 30000;
   web.headersTimeout = 10000;
   web.maxHeadersCount = 100;
