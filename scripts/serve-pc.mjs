@@ -1,4 +1,5 @@
 // Local-PC service host: persistent PostgreSQL + Spring API + built static web.
+import { workTerminal } from "./lib/work-terminal.mjs";
 import EmbeddedPostgres from "embedded-postgres";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
@@ -77,11 +78,13 @@ const pg = new EmbeddedPostgres({
 });
 let api,
   web,
-  stopping = false;
+  stopping = false,
+  terminal;
 const log = fs.openSync(path.join(dir, "api.log"), "a", 0o600);
 async function stop(code = 0) {
   if (stopping) return;
   stopping = true;
+  terminal?.stop();
   if (web) await new Promise((resolve) => web.close(resolve));
   if (api && api.exitCode === null) {
     const p = api;
@@ -169,6 +172,13 @@ try {
     ".ico": "image/x-icon",
     ".json": "application/json",
   };
+  terminal = workTerminal({
+    root,
+    origin,
+    apiPort: config.apiPort,
+    owner: config.terminalOwner,
+  });
+  process.once("exit", () => terminal.stop());
   web = http.createServer(async (req, res) => {
     // Keep browser cookies and the API's CSRF origin on one local address.
     if (
@@ -190,6 +200,7 @@ try {
       "Content-Security-Policy",
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
     );
+    if (await terminal.http(req, res)) return;
     if (req.url === "/api" || req.url?.startsWith("/api/")) {
       const headers = { ...req.headers };
       delete headers["x-passport-client-ip"];
@@ -252,6 +263,8 @@ try {
       res.end();
     }
   });
+  web.on("upgrade", terminal.upgrade);
+  web.on("close", terminal.stop);
   web.requestTimeout = 30000;
   web.headersTimeout = 10000;
   web.maxHeadersCount = 100;

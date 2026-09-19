@@ -2569,3 +2569,34 @@ td.mono {
   background: #e7e9f3;
   color: #585f7b;
 }
+
+.work-terminal {
+  margin: 12px 0 24px;
+}
+.work-terminal-panel {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 14px;
+  min-width: 0;
+}
+.terminal-screen {
+  height: 520px;
+  padding: 10px;
+  margin: 12px 0;
+  background: #15171b;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.terminal-screen .xterm {
+  height: 100%;
+}
+@media (max-width: 600px) {
+  .terminal-screen {
+    height: 420px;
+    padding: 4px;
+  }
+  .work-terminal-panel {
+    padding: 8px;
+  }
+}

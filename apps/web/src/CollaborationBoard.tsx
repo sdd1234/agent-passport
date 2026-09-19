@@ -104,7 +104,7 @@ export function CollaborationBoard({
     <section className="collaboration-board">
       <div className="timeline-toolbar">
         <div>
-          <h3>함께 작업하기</h3>
+          <h3>작업 · 인수인계</h3>
           <p>
             작업을 나눠 맡고 진행 내용을 공유합니다. 화면은 5초마다 갱신됩니다.
           </p>
@@ -172,7 +172,8 @@ export function CollaborationBoard({
       )}
       {!tasks.length && (
         <p className="timeline-note">
-          작업을 등록하면 Claude와 Codex가 각자 맡아 진행할 수 있습니다.
+          작업 내용과 진행 상황을 남기면 다음 Claude 또는 Codex가 이어받을 수
+          있습니다.
         </p>
       )}
       <div className="collaboration-tasks">

@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Folder as FolderIcon, MoreVertical, ArrowLeft } from "lucide-react";
 import { ImportPanel } from "./ImportPanel";
+const WorkTerminal = lazy(() =>
+  import("./WorkTerminal").then((m) => ({ default: m.WorkTerminal })),
+);
 import { CollaborationBoard } from "./CollaborationBoard";
 import { FolderEntries } from "./FolderEntries";
 import { ReceivePairing, SendPairing } from "./Pairing";
@@ -288,6 +291,13 @@ export function Folders({
         {selected && (
           <article key={selected.id}>
             <h2>{selected.name}</h2>
+            <Suspense fallback={<p>작업 도구 불러오는 중…</p>}>
+              <WorkTerminal
+                key={selected.id}
+                folderId={selected.id}
+                api={api}
+              />
+            </Suspense>
             {selected.role === "owner" && (
               <details
                 className="folder-sharing"

@@ -1,8 +1,16 @@
 import { readClientConnection } from "./lib/client-connection.mjs";
+import fs from "node:fs/promises";
 import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const provider = process.env.PASSPORT_CLIENT_PROVIDER || "";
-const { config, legacy } = await readClientConnection(root, provider);
+const { config, legacy } = process.env.PASSPORT_CONNECTION_FILE
+  ? {
+      config: JSON.parse(
+        await fs.readFile(process.env.PASSPORT_CONNECTION_FILE, "utf8"),
+      ),
+      legacy: false,
+    }
+  : await readClientConnection(root, provider);
 if (legacy)
   console.error(
     "Using legacy shared connection. Set up a separate --provider connection for simultaneous collaboration.",

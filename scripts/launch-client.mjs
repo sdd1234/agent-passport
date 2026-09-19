@@ -9,7 +9,16 @@ if (!["codex", "claude"].includes(name))
 const server = {
   command: process.execPath,
   args: [path.join(root, "scripts/service-mcp.mjs")],
-  env: { PASSPORT_PROJECT_CWD: process.cwd(), PASSPORT_CLIENT_PROVIDER: name },
+  env: {
+    PASSPORT_PROJECT_CWD: process.cwd(),
+    PASSPORT_CLIENT_PROVIDER: name,
+    ...(process.env.PASSPORT_CONNECTION_FILE
+      ? { PASSPORT_CONNECTION_FILE: process.env.PASSPORT_CONNECTION_FILE }
+      : {}),
+    ...(process.env.PASSPORT_FOLDER_ID
+      ? { PASSPORT_FOLDER_ID: process.env.PASSPORT_FOLDER_ID }
+      : {}),
+  },
 };
 const args =
   name === "codex"
@@ -19,13 +28,14 @@ const args =
         "-c",
         `mcp_servers.agent-passport.args=${JSON.stringify(server.args)}`,
         "-c",
-        'mcp_servers.agent-passport.env_vars=["PASSPORT_PROJECT_CWD","PASSPORT_CLIENT_PROVIDER"]',
+        'mcp_servers.agent-passport.env_vars=["PASSPORT_PROJECT_CWD","PASSPORT_CLIENT_PROVIDER","PASSPORT_CONNECTION_FILE","PASSPORT_FOLDER_ID"]',
         "-c",
         "mcp_servers.agent-passport.required=true",
       ]
     : [
         "--mcp-config",
         JSON.stringify({ mcpServers: { "agent-passport": server } }),
+        "--",
       ];
 const child = spawn(name, [...args, ...process.argv.slice(3)], {
   cwd: process.cwd(),

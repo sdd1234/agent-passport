@@ -191,8 +191,8 @@ server.registerTool(
       request(
         "/folders/context?" +
           new URLSearchParams(
-            b.folder_id
-              ? { folderId: b.folder_id }
+            b.folder_id || process.env.PASSPORT_FOLDER_ID
+              ? { folderId: b.folder_id || process.env.PASSPORT_FOLDER_ID! }
               : {
                   cwd:
                     b.cwd || process.env.PASSPORT_PROJECT_CWD || process.cwd(),
